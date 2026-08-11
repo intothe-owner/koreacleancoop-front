@@ -1,9 +1,9 @@
 // @/components/admin/ContainerBoard.tsx
-import React from "react";
+import React, { useState } from "react";
 import {
     LayoutTemplate, Trash2, Wand2, Plus,
     Bold, Italic, Underline, Link as LinkIcon, Box, AlignLeft, AlignCenter, AlignRight,
-    Upload, Video, Music, ImageIcon, X, Merge, Split, Sparkles, ImagePlus
+    Upload, Video, Music, ImageIcon, X, Merge, Split, Sparkles, ImagePlus, Code
 } from "lucide-react";
 import { ContainerNode, ElementNode, TableData } from "@/types/types";
 
@@ -45,6 +45,15 @@ export default function ContainerBoard({
     mergeCells, unmergeCells, getCommonBorderWidth, getCommonBorderColor, applyToTableCells, savedRangeRef,
     setAiModalOpen
 }: ContainerBoardProps) {
+
+    // 💡 HTML 소스 편집 모드를 관리하는 상태
+    const [htmlModeElements, setHtmlModeElements] = useState<Record<string, boolean>>({});
+
+    const toggleHtmlMode = (e: React.MouseEvent, id: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setHtmlModeElements(prev => ({ ...prev, [id]: !prev[id] }));
+    };
 
     const getWidthClass = (width: string) => {
         switch (width) {
@@ -96,7 +105,7 @@ export default function ContainerBoard({
                                             {el.type === "TEXT" && el.styles && (
                                                 <div
                                                     id={`element-${el.id}`}
-                                                    className={`relative group inline-block ${isActive ? 'outline outline-2 outline-[#00d0d0]' : 'hover:outline hover:outline-1 hover:outline-slate-300'}`}
+                                                    className={`relative group inline-block w-full ${isActive ? 'outline outline-2 outline-[#00d0d0]' : 'hover:outline hover:outline-1 hover:outline-slate-300'}`}
                                                     onMouseDown={(e) => {
                                                         e.stopPropagation();
                                                         if (activeElementId !== el.id) setActiveElementId(el.id);
@@ -108,6 +117,17 @@ export default function ContainerBoard({
                                                 >
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-2 z-50 whitespace-nowrap element-toolbar">
+                                                            
+                                                            {/* 💡 HTML 소스 편집 버튼 */}
+                                                            <button 
+                                                                onMouseDown={(e) => toggleHtmlMode(e, el.id)} 
+                                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors ${htmlModeElements[el.id] ? 'bg-slate-800 text-green-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`} 
+                                                                title="HTML 소스 직접 편집"
+                                                            >
+                                                                <Code size={14} /> HTML
+                                                            </button>
+                                                            <div className="w-px h-4 bg-slate-300" />
+
                                                             {setAiModalOpen && (
                                                                 <>
                                                                     <button onMouseDown={(e) => e.preventDefault()} onClick={() => setAiModalOpen('TEXT', el.id, el.content)} className="text-purple-600 hover:text-purple-800 flex items-center gap-1 bg-purple-50 px-2 py-1 rounded" title="AI로 내용 수정">
@@ -169,66 +189,17 @@ export default function ContainerBoard({
                                                             </div>
                                                             <div className="w-px h-4 bg-slate-300" />
                                                             <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded">
-                                                                <button
-                                                                    onMouseDown={(e) => e.preventDefault()}
-                                                                    onClick={() => {
-                                                                        const newVal = el.styles!.fontWeight === "bold" ? "normal" : "bold";
-                                                                        const isApplied = applyStyleToSelection('fontWeight', newVal);
-                                                                        if (!isApplied) updateElementStyle(container.id, column.id, el.id, "fontWeight", newVal);
-                                                                    }}
-                                                                    className={`p-1 rounded ${el.styles!.fontWeight === 'bold' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
-                                                                    title="굵게"
-                                                                >
-                                                                    <Bold size={14} />
-                                                                </button>
-                                                                <button
-                                                                    onMouseDown={(e) => e.preventDefault()}
-                                                                    onClick={() => {
-                                                                        const newVal = el.styles!.fontStyle === "italic" ? "normal" : "italic";
-                                                                        const isApplied = applyStyleToSelection('fontStyle', newVal);
-                                                                        if (!isApplied) updateElementStyle(container.id, column.id, el.id, "fontStyle", newVal);
-                                                                    }}
-                                                                    className={`p-1 rounded ${el.styles!.fontStyle === 'italic' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
-                                                                    title="이탤릭"
-                                                                >
-                                                                    <Italic size={14} />
-                                                                </button>
-                                                                <button
-                                                                    onMouseDown={(e) => e.preventDefault()}
-                                                                    onClick={() => {
-                                                                        const newVal = el.styles!.textDecoration === "underline" ? "none" : "underline";
-                                                                        const isApplied = applyStyleToSelection('textDecoration', newVal);
-                                                                        if (!isApplied) updateElementStyle(container.id, column.id, el.id, "textDecoration", newVal);
-                                                                    }}
-                                                                    className={`p-1 rounded ${el.styles!.textDecoration === 'underline' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
-                                                                    title="밑줄"
-                                                                ><Underline size={14} /></button>
-                                                                <button
-                                                                    onMouseDown={(e) => e.preventDefault()}
-                                                                    onClick={() => {
-                                                                        if (savedRangeRef.current && activeElementId) {
-                                                                            const url = window.prompt("선택한 글자에 연결할 웹사이트 주소를 입력하세요:", "https://");
-                                                                            if (url) applyStyleToSelection('link', url);
-                                                                        } else {
-                                                                            alert("링크를 걸 글자를 먼저 드래그하여 선택해주세요.");
-                                                                        }
-                                                                    }}
-                                                                    className="p-1 rounded text-slate-500 hover:bg-white hover:shadow-sm hover:text-indigo-600"
-                                                                    title="링크 걸기 (글자 드래그 후 클릭)"
-                                                                ><LinkIcon size={14} /></button>
-                                                            </div>
-                                                            <div className="w-px h-4 bg-slate-300" />
-                                                            <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded">
-                                                                <button onMouseDown={(e) => e.preventDefault()} onClick={() => updateElementStyle(container.id, column.id, el.id, "layerAlign", "flex-start")} className={`p-1 rounded ${el.styles.layerAlign === 'flex-start' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`} title="박스 좌측 배치"><Box size={14} /></button>
-                                                                <button onMouseDown={(e) => e.preventDefault()} onClick={() => updateElementStyle(container.id, column.id, el.id, "layerAlign", "center")} className={`p-1 rounded ${el.styles.layerAlign === 'center' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`} title="박스 중앙 배치"><AlignCenter size={14} /></button>
-                                                                <button onMouseDown={(e) => e.preventDefault()} onClick={() => updateElementStyle(container.id, column.id, el.id, "layerAlign", "flex-end")} className={`p-1 rounded ${el.styles.layerAlign === 'flex-end' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`} title="박스 우측 배치"><Box size={14} /></button>
+                                                                <button onMouseDown={(e) => e.preventDefault()} onClick={() => { const newVal = el.styles!.fontWeight === "bold" ? "normal" : "bold"; const isApplied = applyStyleToSelection('fontWeight', newVal); if (!isApplied) updateElementStyle(container.id, column.id, el.id, "fontWeight", newVal); }} className={`p-1 rounded ${el.styles!.fontWeight === 'bold' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`} title="굵게"><Bold size={14} /></button>
+                                                                <button onMouseDown={(e) => e.preventDefault()} onClick={() => { const newVal = el.styles!.fontStyle === "italic" ? "normal" : "italic"; const isApplied = applyStyleToSelection('fontStyle', newVal); if (!isApplied) updateElementStyle(container.id, column.id, el.id, "fontStyle", newVal); }} className={`p-1 rounded ${el.styles!.fontStyle === 'italic' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`} title="이탤릭"><Italic size={14} /></button>
+                                                                <button onMouseDown={(e) => e.preventDefault()} onClick={() => { const newVal = el.styles!.textDecoration === "underline" ? "none" : "underline"; const isApplied = applyStyleToSelection('textDecoration', newVal); if (!isApplied) updateElementStyle(container.id, column.id, el.id, "textDecoration", newVal); }} className={`p-1 rounded ${el.styles!.textDecoration === 'underline' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`} title="밑줄"><Underline size={14} /></button>
+                                                                <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (savedRangeRef.current && activeElementId) { const url = window.prompt("선택한 글자에 연결할 웹사이트 주소를 입력하세요:", "https://"); if (url) applyStyleToSelection('link', url); } else { alert("링크를 걸 글자를 먼저 드래그하여 선택해주세요."); } }} className="p-1 rounded text-slate-500 hover:bg-white hover:shadow-sm hover:text-indigo-600" title="링크 걸기 (글자 드래그 후 클릭)"><LinkIcon size={14} /></button>
                                                             </div>
                                                             <div className="w-px h-4 bg-slate-300" />
                                                             <button onMouseDown={(e) => e.preventDefault()} onClick={() => deleteElement(container.id, column.id, el.id)} className="text-slate-500 hover:text-red-500" title="삭제"><Trash2 size={16} /></button>
                                                         </div>
                                                     )}
 
-                                                    {isActive && (
+                                                    {isActive && !htmlModeElements[el.id] && (
                                                         <>
                                                             <div onMouseDown={(e) => handleResizeStart(e, container.id, column.id, el, 'nw')} className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-[#00d0d0] rounded-full cursor-nwse-resize z-10" />
                                                             <div onMouseDown={(e) => handleResizeStart(e, container.id, column.id, el, 'ne')} className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-[#00d0d0] rounded-full cursor-nesw-resize z-10" />
@@ -237,33 +208,44 @@ export default function ContainerBoard({
                                                         </>
                                                     )}
 
-                                                    <div
-                                                        id={`editable-${el.id}`}
-                                                        contentEditable
-                                                        suppressContentEditableWarning
-                                                        onMouseUp={handleSelection}
-                                                        onKeyUp={handleSelection}
-                                                        onBlur={(e) => {
-                                                            if (e.relatedTarget && (e.relatedTarget as HTMLElement).closest('.element-toolbar')) {
-                                                                return;
-                                                            }
-                                                            updateElementHtmlContent(el.id, e.currentTarget.innerHTML);
-                                                        }}
-                                                        style={{
-                                                            fontSize: `${el.styles.fontSize}px`,
-                                                            color: el.styles.color,
-                                                            textAlign: el.styles.textAlign,
-                                                            fontFamily: el.styles.fontFamily !== 'default' ? el.styles.fontFamily : 'inherit',
-                                                            outline: 'none',
-                                                            fontWeight: el.styles.fontWeight || 'normal',
-                                                            fontStyle: el.styles.fontStyle || 'normal',
-                                                            textDecoration: el.styles.textDecoration || 'none',
-                                                            width: '100%',
-                                                            height: '100%'
-                                                        }}
-                                                        className="px-2 cursor-text whitespace-pre-wrap"
-                                                        dangerouslySetInnerHTML={{ __html: el.content }}
-                                                    />
+                                                    {/* 💡 HTML 모드일 때 Textarea 노출 */}
+                                                    {htmlModeElements[el.id] ? (
+                                                        <textarea
+                                                            value={el.content}
+                                                            onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}
+                                                            onChange={(e) => updateElementHtmlContent(el.id, e.target.value)}
+                                                            className="w-full min-h-[200px] p-4 bg-slate-900 text-green-400 font-mono text-sm leading-relaxed rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                                                            placeholder="HTML 코드를 입력하세요..."
+                                                        />
+                                                    ) : (
+                                                        <div
+                                                            id={`editable-${el.id}`}
+                                                            contentEditable
+                                                            suppressContentEditableWarning
+                                                            onMouseUp={handleSelection}
+                                                            onKeyUp={handleSelection}
+                                                            onBlur={(e) => {
+                                                                if (e.relatedTarget && (e.relatedTarget as HTMLElement).closest('.element-toolbar')) {
+                                                                    return;
+                                                                }
+                                                                updateElementHtmlContent(el.id, e.currentTarget.innerHTML);
+                                                            }}
+                                                            style={{
+                                                                fontSize: `${el.styles.fontSize}px`,
+                                                                color: el.styles.color,
+                                                                textAlign: el.styles.textAlign,
+                                                                fontFamily: el.styles.fontFamily !== 'default' ? el.styles.fontFamily : 'inherit',
+                                                                outline: 'none',
+                                                                fontWeight: el.styles.fontWeight || 'normal',
+                                                                fontStyle: el.styles.fontStyle || 'normal',
+                                                                textDecoration: el.styles.textDecoration || 'none',
+                                                                width: '100%',
+                                                                height: '100%'
+                                                            }}
+                                                            className="px-2 cursor-text whitespace-pre-wrap"
+                                                            dangerouslySetInnerHTML={{ __html: el.content }}
+                                                        />
+                                                    )}
                                                 </div>
                                             )}
 
@@ -370,7 +352,7 @@ export default function ContainerBoard({
                                                 </div>
                                             )}
 
-                                            {/* 5. BUTTON Element (💡 완전히 리뉴얼된 버튼 영역) */}
+                                            {/* 5. BUTTON Element (💡 String() 타입 강제변환 적용 완료) */}
                                             {el.type === "BUTTON" && el.buttonStyles && (
                                                 <div className="p-4 flex flex-col justify-center items-center w-full relative" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {isActive && (
@@ -380,7 +362,6 @@ export default function ContainerBoard({
                                                             
                                                             <div className="w-px h-4 bg-slate-300" />
                                                             
-                                                            {/* 💡 버튼 링크 설정이 툴바(팝업) 안으로 들어왔습니다! */}
                                                             <div className="flex items-center gap-1" title="버튼 클릭 시 이동할 URL">
                                                                 <LinkIcon size={14} className="text-slate-400" />
                                                                 <input
@@ -397,15 +378,14 @@ export default function ContainerBoard({
                                                         </div>
                                                     )}
                                                     
-                                                    {/* 💡 에디터 상에서도 <a> 태그로 감싸 시각적 / 구조적으로 링크임을 표현합니다. */}
                                                     <a 
                                                         href={(el.buttonStyles as any).linkUrl || "#"}
-                                                        onClick={(e) => e.preventDefault()} // 빌더 화면에서 클릭 시 다른 페이지로 이동하는 것 방지
+                                                        onClick={(e) => e.preventDefault()} 
                                                         style={{ 
                                                             backgroundColor: el.buttonStyles.backgroundColor, 
                                                             color: el.buttonStyles.color, 
                                                             fontSize: `${el.buttonStyles.fontSize}px`, 
-                                                            width: `${el.buttonStyles.width}px`, 
+                                                            width: String(el.buttonStyles.width) === "auto" ? "auto" : `${el.buttonStyles.width}px`, 
                                                             borderRadius: `${el.buttonStyles.borderRadius}px`,
                                                             display: 'inline-flex',
                                                             justifyContent: 'center',
@@ -585,6 +565,17 @@ export default function ContainerBoard({
                                                 <div className="w-full relative" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-0 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-2 z-50 whitespace-nowrap overflow-x-auto">
+                                                            
+                                                            {/* 💡 HTML 소스 편집 버튼 추가 */}
+                                                            <button 
+                                                                onMouseDown={(e) => toggleHtmlMode(e, el.id)} 
+                                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors ${htmlModeElements[el.id] ? 'bg-slate-800 text-green-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`} 
+                                                                title="HTML 소스 직접 편집"
+                                                            >
+                                                                <Code size={14} /> HTML
+                                                            </button>
+                                                            <div className="w-px h-4 bg-slate-300" />
+
                                                             <button onClick={() => updateElementProps(container.id, column.id, el.id, 'cardData', 'layout', el.cardData!.layout === 'row' ? 'col' : 'row')} className="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded font-bold text-slate-700">
                                                                 {el.cardData.layout === 'row' ? '좌우 모드' : '위아래 모드'}
                                                             </button>
@@ -668,53 +659,65 @@ export default function ContainerBoard({
                                                             <button onClick={() => deleteElement(container.id, column.id, el.id)} className="text-slate-500 hover:text-red-500"><Trash2 size={16} /></button>
                                                         </div>
                                                     )}
-                                                    <div
-                                                        style={{
-                                                            borderStyle: 'solid',
-                                                            borderWidth: `${el.cardData.borderWidth}px`,
-                                                            borderColor: el.cardData.borderColor,
-                                                            backgroundColor: el.cardData.backgroundColor,
-                                                            borderRadius: `${el.cardData.borderRadius}px`,
-                                                            padding: `${el.cardData.padding}px`,
-                                                            alignItems: el.cardData.layout === 'col'
-                                                                ? (el.styles?.textAlign === 'center' ? 'center' : el.styles?.textAlign === 'right' ? 'flex-end' : 'flex-start')
-                                                                : (el.cardData.verticalAlign || 'center')
-                                                        }}
-                                                        className={`w-full transition-all flex gap-4 ${el.cardData.layout === 'col' ? 'flex-col items-start' : 'flex-row items-center'} ${el.cardData.shadow !== 'none' ? `shadow-${el.cardData.shadow}` : ''} ${isActive ? 'outline outline-2 outline-[#00d0d0]' : ''}`}
-                                                    >
-                                                        {el.cardData.iconUrl && (
-                                                            <div className="flex-shrink-0 relative group">
-                                                                <img src={el.cardData.iconUrl} style={{ width: el.cardData.iconSize, height: el.cardData.iconSize }} className="object-contain" alt="icon" />
-                                                                <button
-                                                                    onClick={() => updateElementProps(container.id, column.id, el.id, 'cardData', 'iconUrl', '')}
-                                                                    className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full text-[10px] hidden group-hover:block"
-                                                                >
-                                                                    <X size={12} />
-                                                                </button>
+                                                    
+                                                    {/* 💡 HTML 모드일 때 Textarea 노출 (카드 컴포넌트) */}
+                                                    {htmlModeElements[el.id] ? (
+                                                        <textarea
+                                                            value={el.content}
+                                                            onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}
+                                                            onChange={(e) => updateElementHtmlContent(el.id, e.target.value)}
+                                                            className="w-full min-h-[200px] p-4 bg-slate-900 text-green-400 font-mono text-sm leading-relaxed rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                                                            placeholder="HTML 코드를 입력하세요..."
+                                                        />
+                                                    ) : (
+                                                        <div
+                                                            style={{
+                                                                borderStyle: 'solid',
+                                                                borderWidth: `${el.cardData.borderWidth}px`,
+                                                                borderColor: el.cardData.borderColor,
+                                                                backgroundColor: el.cardData.backgroundColor,
+                                                                borderRadius: `${el.cardData.borderRadius}px`,
+                                                                padding: `${el.cardData.padding}px`,
+                                                                alignItems: el.cardData.layout === 'col'
+                                                                    ? (el.styles?.textAlign === 'center' ? 'center' : el.styles?.textAlign === 'right' ? 'flex-end' : 'flex-start')
+                                                                    : (el.cardData.verticalAlign || 'center')
+                                                            }}
+                                                            className={`w-full transition-all flex gap-4 ${el.cardData.layout === 'col' ? 'flex-col items-start' : 'flex-row items-center'} ${el.cardData.shadow !== 'none' ? `shadow-${el.cardData.shadow}` : ''} ${isActive ? 'outline outline-2 outline-[#00d0d0]' : ''}`}
+                                                        >
+                                                            {el.cardData.iconUrl && (
+                                                                <div className="flex-shrink-0 relative group">
+                                                                    <img src={el.cardData.iconUrl} style={{ width: el.cardData.iconSize, height: el.cardData.iconSize }} className="object-contain" alt="icon" />
+                                                                    <button
+                                                                        onClick={() => updateElementProps(container.id, column.id, el.id, 'cardData', 'iconUrl', '')}
+                                                                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full text-[10px] hidden group-hover:block"
+                                                                    >
+                                                                        <X size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex-grow w-full">
+                                                                <div
+                                                                    id={`editable-${el.id}`}
+                                                                    contentEditable
+                                                                    suppressContentEditableWarning
+                                                                    onMouseUp={handleSelection}
+                                                                    onKeyUp={handleSelection}
+                                                                    style={{
+                                                                        fontSize: el.styles?.fontSize ? `${el.styles.fontSize}px` : '16px',
+                                                                        color: el.styles?.color || '#000000',
+                                                                        textAlign: el.styles?.textAlign || 'left',
+                                                                        fontFamily: el.styles?.fontFamily && el.styles.fontFamily !== 'default' ? el.styles.fontFamily : 'inherit',
+                                                                        fontWeight: el.styles?.fontWeight || 'normal',
+                                                                        fontStyle: el.styles?.fontStyle || 'normal',
+                                                                        textDecoration: el.styles?.textDecoration || 'none',
+                                                                    }}
+                                                                    onBlur={(e) => updateElementHtmlContent(el.id, e.currentTarget.innerHTML)}
+                                                                    className="outline-none min-h-[50px] cursor-text w-full break-words"
+                                                                    dangerouslySetInnerHTML={{ __html: el.content }}
+                                                                />
                                                             </div>
-                                                        )}
-                                                        <div className="flex-grow w-full">
-                                                            <div
-                                                                id={`editable-${el.id}`}
-                                                                contentEditable
-                                                                suppressContentEditableWarning
-                                                                onMouseUp={handleSelection}
-                                                                onKeyUp={handleSelection}
-                                                                style={{
-                                                                    fontSize: el.styles?.fontSize ? `${el.styles.fontSize}px` : '16px',
-                                                                    color: el.styles?.color || '#000000',
-                                                                    textAlign: el.styles?.textAlign || 'left',
-                                                                    fontFamily: el.styles?.fontFamily && el.styles.fontFamily !== 'default' ? el.styles.fontFamily : 'inherit',
-                                                                    fontWeight: el.styles?.fontWeight || 'normal',
-                                                                    fontStyle: el.styles?.fontStyle || 'normal',
-                                                                    textDecoration: el.styles?.textDecoration || 'none',
-                                                                }}
-                                                                onBlur={(e) => updateElementHtmlContent(el.id, e.currentTarget.innerHTML)}
-                                                                className="outline-none min-h-[50px] cursor-text w-full break-words"
-                                                                dangerouslySetInnerHTML={{ __html: el.content }}
-                                                            />
                                                         </div>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
