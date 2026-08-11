@@ -16,8 +16,8 @@ import ContainerBoard from "@/components/admin/ContainerBoard";
 import BuilderModals from "@/components/admin/BuilderModals";
 
 export default function VisualPageBuilder() {
-    const [title, setTitle] = useState("");
-    const [selectedMenuId, setSelectedMenuId] = useState<string>("");
+    const [title, setTitle] = useState("메인 페이지");
+    const [selectedMenuId, setSelectedMenuId] = useState<string>("0");
     const [menus, setMenus] = useState<MenuType[]>([]);
     const [containers, setContainers] = useState<ContainerNode[]>([]);
     const [sliderType, setSliderType] = useState<"none" | "image" | "video" | "header">("none");
@@ -63,7 +63,7 @@ export default function VisualPageBuilder() {
             const targetMenu = menus.find(m => String(m.id) === selectedMenuId);
             if (targetMenu) setTitle(targetMenu.name);
         } else {
-            setTitle("");
+            setTitle("메인 페이지");
         }
     }, [selectedMenuId, menus]);
 
