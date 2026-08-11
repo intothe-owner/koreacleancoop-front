@@ -69,8 +69,8 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
   const isSolid = !hasSlider || isScrolled || isMobileMenuOpen;
 
   const headerClasses = `fixed top-0 z-50 w-full transition-all duration-300 ${isSolid
-      ? "bg-white/90 backdrop-blur-md border-b border-slate-200 dark:bg-slate-900/90 dark:border-slate-800 shadow-sm"
-      : "bg-transparent border-transparent"
+    ? "bg-white/90 backdrop-blur-md border-b border-slate-200 dark:bg-slate-900/90 dark:border-slate-800 shadow-sm"
+    : "bg-transparent border-transparent"
     }`;
 
   const textClasses = isSolid
@@ -131,7 +131,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
         </nav>
 
         <div className="w-auto md:w-1/4 flex justify-end items-center gap-2 sm:gap-4">
-          
+
           {/* 💡 수동 모드일 때만 next-themes를 이용해 테마 토글 버튼 노출 */}
           {themeMode === "MENUAL" && (
             <button
@@ -139,16 +139,21 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
               className={`p-2 rounded-full transition-colors ${isSolid ? "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800" : "text-white hover:bg-black/20"}`}
               aria-label="테마 변경"
             >
-              {/* Hydration 에러 방지: 마운트 전에는 빈 공간을 렌더링하고, 완료 후 아이콘 표시 */}
               {mounted ? (
                 resolvedTheme === "dark" ? <Sun size={20} /> : <Moon size={20} />
               ) : (
-                <div className="w-5 h-5" /> 
+                <div className="w-5 h-5" />
               )}
             </button>
           )}
 
           <div className="hidden md:flex items-center gap-5 ml-2">
+            
+            {/* 💡 추가된 부분: 제휴문의 버튼 (회원/비회원 공통 노출) */}
+            <Link href="/contact" className={`text-[13px] font-extrabold transition-colors ${textClasses}`}>
+              제휴문의
+            </Link>
+
             {isLoggedIn ? (
               <div
                 className="relative group py-5"
@@ -258,6 +263,15 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 <UserCircle size={24} className="text-indigo-600" />
                 <span className="font-bold text-slate-800 dark:text-white text-lg">{userData?.name}님</span>
               </div>
+              
+              {/* 💡 모바일용 제휴문의 버튼 (회원) */}
+              <Link
+                href="/contact"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
+              >
+                제휴문의
+              </Link>
 
               {userData?.level >= 9 && (
                 <Link
@@ -286,6 +300,16 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
           ) : (
             authMode !== "NONE" && (
               <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3 bg-slate-50 dark:bg-slate-800/30 mt-auto">
+                
+                {/* 💡 모바일용 제휴문의 버튼 (비회원) */}
+                <Link
+                  href="/contact"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
+                >
+                  제휴문의
+                </Link>
+
                 <Link
                   href="/login"
                   onClick={() => setIsMobileMenuOpen(false)}

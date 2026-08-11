@@ -1,3 +1,4 @@
+// @/components/main/VisualPageBuilder.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -6,7 +7,8 @@ import {
     ElementNode, ColumnNode, AnimationConfig, ContainerNode, MenuType, SlideItem
 } from "@/types/types";
 
-import { Sparkles } from "lucide-react";
+// 💡 ImagePlus 아이콘 추가
+import { Sparkles, ImagePlus } from "lucide-react";
 
 import PageSettings from "@/components/admin/PageSettings";
 import SlideManager from "@/components/admin/SlideManager";
@@ -18,7 +20,7 @@ export default function VisualPageBuilder() {
     const [selectedMenuId, setSelectedMenuId] = useState<string>("");
     const [menus, setMenus] = useState<MenuType[]>([]);
     const [containers, setContainers] = useState<ContainerNode[]>([]);
-    const [sliderType, setSliderType] = useState<"none" | "image" | "video">("none");
+    const [sliderType, setSliderType] = useState<"none" | "image" | "video" | "header">("none");
     const [pageId, setPageId] = useState<number | null>(null);
     const [pageMeta, setPageMeta] = useState({ bgImage: '', bgTitle: '' });
     const [metaBgFile, setMetaBgFile] = useState<File | null>(null);
@@ -42,18 +44,28 @@ export default function VisualPageBuilder() {
     const [animModalOpen, setAnimModalOpen] = useState<string | null>(null);
     const [tempAnim, setTempAnim] = useState<AnimationConfig>({ type: "none", duration: 0.5, delay: 0 });
 
-    // 💡 [AI 기능] 타겟 상태 구체화 (페이지 전체 추가 vs 개별 요소 수정)
     const [aiModalOpen, setAiModalOpen] = useState(false);
     const [aiPrompt, setAiPrompt] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
     const [aiTarget, setAiTarget] = useState<{ type: 'PAGE' | 'CONTAINER' | 'TEXT' | 'IMAGE' | 'META', id?: string, content?: string }>({ type: 'PAGE' });
 
-    // 공통 AI 모달 오프너 함수 (자식 컴포넌트로 전달)
-    const openAiModal = (type: 'PAGE' | 'CONTAINER' | 'TEXT' | 'IMAGE', id?: string, content?: string) => {
+    const openAiModal = (type: 'PAGE' | 'CONTAINER' | 'TEXT' | 'IMAGE' | 'META', id?: string, content?: string) => {
         setAiTarget({ type, id, content });
         setAiPrompt("");
         setAiModalOpen(true);
     };
+
+    // 💡 연결할 메뉴 선택 시 페이지 제목(Title) 자동 기입 로직 추가
+    useEffect(() => {
+        if (selectedMenuId === "0") {
+            setTitle("메인 페이지");
+        } else if (selectedMenuId !== "") {
+            const targetMenu = menus.find(m => String(m.id) === selectedMenuId);
+            if (targetMenu) setTitle(targetMenu.name);
+        } else {
+            setTitle("");
+        }
+    }, [selectedMenuId, menus]);
 
     useEffect(() => {
         const handleDocumentSelectionChange = () => {
@@ -110,7 +122,7 @@ export default function VisualPageBuilder() {
 
     const loadPageData = async (menuId: string) => {
         if (menuId === "") {
-            setPageId(null); setTitle(""); setContainers([]); setSlides([]); setSliderType("none"); return;
+            setPageId(null); setContainers([]); setSlides([]); setSliderType("none"); return;
         }
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/`);
@@ -126,15 +138,28 @@ export default function VisualPageBuilder() {
                     page = json.data.find((p: any) => p.menuId === targetMenuId);
                 }
                 if (page) {
-                    setPageId(page.id); setTitle(page.title); setContainers(page.contentBlocks || []);
-                    setPageMeta(page.pageMeta || { bgImage: '', bgTitle: '' });
+                    setPageId(page.id); setContainers(page.contentBlocks || []);
+
+                    const savedMeta = page.pageMeta || { bgImage: '', bgTitle: '' };
+                    setPageMeta(savedMeta);
+
+                    // 💡 슬라이드가 있으면 슬라이드 타입 설정
                     if (page.sliderData && page.sliderData.length > 0) {
-                        setSlides(page.sliderData); setSliderType(page.sliderData[0].type || "image");
-                    } else {
-                        setSlides([]); setSliderType("none");
+                        setSlides(page.sliderData);
+                        setSliderType(page.sliderData[0].type || "image");
+                    }
+                    // 💡 슬라이드는 없는데 메타(헤더)가 있으면 헤더 타입으로 설정
+                    else if (savedMeta.bgImage || savedMeta.bgTitle) {
+                        setSlides([]);
+                        setSliderType("header");
+                    }
+                    // 💡 둘 다 없으면 none
+                    else {
+                        setSlides([]);
+                        setSliderType("none");
                     }
                 } else {
-                    setPageId(null); setTitle(""); setContainers([]); setSlides([]); setSliderType("none");
+                    setPageId(null); setContainers([]); setSlides([]); setSliderType("none");
                     setPageMeta({ bgImage: '', bgTitle: '' });
                 }
             }
@@ -199,8 +224,6 @@ export default function VisualPageBuilder() {
         } catch (error) { alert("서버와 통신 중 오류가 발생했습니다."); }
     };
 
-
-    // 💡 [AI 기능] 생성 및 수정 통합 핸들러
     const handleGenerateAI = async () => {
         if (!aiPrompt.trim()) return alert("원하시는 형태를 프롬프트로 입력해주세요.");
 
@@ -223,23 +246,20 @@ export default function VisualPageBuilder() {
                     const textEl = json.elements.find((el: any) => el.type === 'TEXT');
                     const imgEl = json.elements.find((el: any) => el.type === 'IMAGE');
 
-                    // HTML 태그 제거 및 데이터 반영
                     const newTitle = textEl ? textEl.content.replace(/<[^>]*>?/gm, '') : pageMeta.bgTitle;
                     const newBg = imgEl ? imgEl.content : pageMeta.bgImage;
 
                     setPageMeta({ bgTitle: newTitle, bgImage: newBg });
                 }
-                // 1) 페이지 최하단에 새 컨테이너 추가 (기존 방식)
                 if (aiTarget.type === 'PAGE') {
                     const newElements: ElementNode[] = json.elements.map((el: any) => ({
                         id: Math.random().toString(36).substr(2, 9),
                         type: el.type,
                         content: el.content || "",
-                        // 💡 AI가 반환한 linkUrl을 styles에 기본적으로 병합합니다.
                         styles: {
                             fontFamily: "default", fontSize: 16, color: "#000000", textAlign: "left",
                             layerAlign: "flex-start", width: "auto", height: "auto",
-                            linkUrl: el.linkUrl || "" // <- 추가된 부분
+                            linkUrl: el.linkUrl || ""
                         }
                     }));
                     const newContainer: ContainerNode = {
@@ -248,7 +268,6 @@ export default function VisualPageBuilder() {
                     };
                     setContainers([...containers, newContainer]);
                 }
-                // 2) 특정 엘리먼트 텍스트 혹은 이미지 변경
                 else if (aiTarget.type === 'TEXT' || aiTarget.type === 'IMAGE') {
                     const newContent = json.elements[0]?.content;
                     if (newContent) {
@@ -263,17 +282,15 @@ export default function VisualPageBuilder() {
                         })));
                     }
                 }
-                // 3) 특정 컨테이너를 통째로 리빌드
                 else if (aiTarget.type === 'CONTAINER') {
                     const newElements: ElementNode[] = json.elements.map((el: any) => ({
                         id: Math.random().toString(36).substr(2, 9),
                         type: el.type,
                         content: el.content || "",
-                        // 💡 통째로 리빌드할 때도 linkUrl 반영
                         styles: {
                             fontFamily: "default", fontSize: 16, color: "#000000", textAlign: "left",
                             layerAlign: "flex-start", width: "auto", height: "auto",
-                            linkUrl: el.linkUrl || "" // <- 추가된 부분
+                            linkUrl: el.linkUrl || ""
                         }
                     }));
                     setContainers(containers.map(container =>
@@ -295,7 +312,6 @@ export default function VisualPageBuilder() {
             setIsGenerating(false);
         }
     };
-
 
     const handleBoardClick = (e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('.element-box') || (e.target as HTMLElement).closest('.slide-box')) return;
@@ -481,20 +497,24 @@ export default function VisualPageBuilder() {
     };
 
     return (
-        <div className="max-w-6xl mx-auto pb-20 h-screen" onClick={handleBoardClick} onMouseUp={() => setIsDraggingCell(false)}>
+        <div className="max-w-6xl mx-auto pb-20 min-h-screen" onClick={handleBoardClick} onMouseUp={() => setIsDraggingCell(false)}>
 
+            {/* 변경된 PageSettings 적용 */}
             <PageSettings
                 selectedMenuId={selectedMenuId}
                 setSelectedMenuId={setSelectedMenuId}
                 menus={menus} title={title} setTitle={setTitle} handleSave={handleSave}
+            />
+
+            <SlideManager
+                sliderType={sliderType} setSliderType={setSliderType}
+                slides={slides} setSlides={setSlides}
+                activeSlideFocus={activeSlideFocus} setActiveSlideFocus={setActiveSlideFocus} defaultSlide={defaultSlide}
                 pageMeta={pageMeta} setPageMeta={setPageMeta} setMetaBgFile={setMetaBgFile}
                 setAiModalOpen={(type, id, content) => openAiModal(type as any, id, content)}
             />
 
-            <SlideManager
-                sliderType={sliderType} setSliderType={setSliderType} slides={slides} setSlides={setSlides}
-                activeSlideFocus={activeSlideFocus} setActiveSlideFocus={setActiveSlideFocus} defaultSlide={defaultSlide}
-            />
+
 
             <ContainerBoard
                 containers={containers}
@@ -523,7 +543,6 @@ export default function VisualPageBuilder() {
                 applyToTableCells={applyToTableCells}
                 savedRangeRef={savedRangeRef}
 
-                // 💡 [추가] 자식 컴포넌트로 전달
                 setAiModalOpen={(type, id, content) => openAiModal(type as any, id, content)}
             />
 
