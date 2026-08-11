@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, X, ChevronDown, UserCircle, Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes"; // 💡 next-themes 추가
+import { useTheme } from "next-themes";
 
 interface MenuType {
   id: number;
@@ -31,12 +31,10 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<any>(null);
 
-  // 💡 next-themes 훅 사용 및 Hydration 에러 방지용 mounted 상태 추가
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // 클라이언트 마운트 완료 표시
     setMounted(true);
 
     const token = localStorage.getItem("token");
@@ -88,14 +86,15 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
             {logoUrl ? (
               <img src={logoUrl} alt={siteName} className="w-[150px] h-auto max-h-12 object-contain" />
             ) : (
-              <span className={`text-xl font-extrabold transition-colors ${isSolid ? "text-slate-900 dark:text-white" : "text-white drop-shadow-md"}`}>
+              <span className={`text-xl font-extrabold transition-colors whitespace-nowrap ${isSolid ? "text-slate-900 dark:text-white" : "text-white drop-shadow-md"}`}>
                 {siteName}
               </span>
             )}
           </Link>
         </div>
 
-        <nav className="hidden md:flex flex-1 justify-center items-center gap-10">
+        {/* 💡 gap-10을 gap-4 lg:gap-8로 수정하여 간격 최적화 */}
+        <nav className="hidden md:flex flex-1 justify-center items-center gap-4 lg:gap-8">
           {menus.map((menu) => (
             <div
               key={menu.id}
@@ -105,7 +104,8 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
             >
               <Link
                 href={menu.url || "#"}
-                className={`flex items-center gap-1 text-[15px] font-bold py-5 transition-colors ${textClasses}`}
+                // 💡 whitespace-nowrap 추가: 메뉴명 두 줄로 꺾임 방지
+                className={`flex items-center gap-1 text-[15px] font-bold py-5 transition-colors whitespace-nowrap ${textClasses}`}
               >
                 {menu.name}
                 {menu.children && menu.children.length > 0 && (
@@ -119,7 +119,8 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                     <Link
                       key={child.id}
                       href={child.url || "#"}
-                      className="block px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors"
+                      // 💡 서브메뉴도 두 줄 꺾임 방지
+                      className="block px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors whitespace-nowrap"
                     >
                       {child.name}
                     </Link>
@@ -132,7 +133,6 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
 
         <div className="w-auto md:w-1/4 flex justify-end items-center gap-2 sm:gap-4">
 
-          {/* 💡 수동 모드일 때만 next-themes를 이용해 테마 토글 버튼 노출 */}
           {themeMode === "MENUAL" && (
             <button
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
@@ -149,8 +149,8 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
 
           <div className="hidden md:flex items-center gap-5 ml-2">
             
-            {/* 💡 추가된 부분: 제휴문의 버튼 (회원/비회원 공통 노출) */}
-            <Link href="/contact" className={`text-[13px] font-extrabold transition-colors ${textClasses}`}>
+            {/* 💡 whitespace-nowrap 추가: 제휴문의 글자 꺾임 방지 */}
+            <Link href="/contact" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
               제휴문의
             </Link>
 
@@ -160,7 +160,8 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 onMouseEnter={() => setIsUserMenuOpen(true)}
                 onMouseLeave={() => setIsUserMenuOpen(false)}
               >
-                <div className={`flex items-center gap-1.5 text-[13px] font-extrabold cursor-pointer transition-colors ${textClasses}`}>
+                {/* 💡 whitespace-nowrap 추가: 사용자 이름 영역 꺾임 방지 */}
+                <div className={`flex items-center gap-1.5 text-[13px] font-extrabold cursor-pointer transition-colors whitespace-nowrap ${textClasses}`}>
                   <UserCircle size={18} />
                   <span>{userData?.name}님</span>
                   <ChevronDown size={14} className="opacity-70 group-hover:rotate-180 transition-transform" />
@@ -171,20 +172,20 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                     {userData?.level >= 9 && (
                       <Link
                         href="/admin/dashboard"
-                        className="block px-4 py-2.5 text-sm font-bold text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                        className="block px-4 py-2.5 text-sm font-bold text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors whitespace-nowrap"
                       >
                         관리자
                       </Link>
                     )}
                     <Link
                       href="/mypage"
-                      className="block px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors"
+                      className="block px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors whitespace-nowrap"
                     >
                       정보수정
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors"
+                      className="block w-full text-left px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors whitespace-nowrap"
                     >
                       로그아웃
                     </button>
@@ -194,12 +195,12 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
             ) : (
               <>
                 {authMode !== "NONE" && (
-                  <Link href="/login" className={`text-[13px] font-extrabold transition-colors ${textClasses}`}>
+                  <Link href="/login" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
                     로그인
                   </Link>
                 )}
                 {authMode === "ALL" && (
-                  <Link href="/register" className="text-[13px] font-extrabold px-5 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm">
+                  <Link href="/register" className="text-[13px] font-extrabold px-5 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm whitespace-nowrap">
                     회원가입
                   </Link>
                 )}
@@ -264,7 +265,6 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 <span className="font-bold text-slate-800 dark:text-white text-lg">{userData?.name}님</span>
               </div>
               
-              {/* 💡 모바일용 제휴문의 버튼 (회원) */}
               <Link
                 href="/contact"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -301,7 +301,6 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
             authMode !== "NONE" && (
               <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3 bg-slate-50 dark:bg-slate-800/30 mt-auto">
                 
-                {/* 💡 모바일용 제휴문의 버튼 (비회원) */}
                 <Link
                   href="/contact"
                   onClick={() => setIsMobileMenuOpen(false)}
