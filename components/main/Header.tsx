@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { Menu, X, ChevronDown, UserCircle, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -101,7 +100,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
               onMouseEnter={() => setOpenDropdownId(menu.id)}
               onMouseLeave={() => setOpenDropdownId(null)}
             >
-              <Link
+              <a
                 href={menu.url || "#"}
                 className={`flex items-center gap-1 text-[15px] font-bold py-5 transition-colors whitespace-nowrap ${textClasses}`}
               >
@@ -109,18 +108,18 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 {menu.children && menu.children.length > 0 && (
                   <ChevronDown size={14} className="opacity-70 group-hover:rotate-180 transition-transform" />
                 )}
-              </Link>
+              </a>
 
               {menu.children && menu.children.length > 0 && openDropdownId === menu.id && (
                 <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[160px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
                   {menu.children.map((child) => (
-                    <Link
+                    <a
                       key={child.id}
                       href={child.url || "#"}
                       className="block px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors whitespace-nowrap"
                     >
                       {child.name}
-                    </Link>
+                    </a>
                   ))}
                 </div>
               )}
@@ -147,13 +146,13 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
           <div className="hidden md:flex items-center gap-5 ml-2">
             
             {/* 💡 추가된 부분: 고객지원 메뉴 (제휴문의 왼쪽) */}
-            <Link href="/support" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
+            <a href="/support" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
               고객지원
-            </Link>
+            </a>
 
-            <Link href="/contact" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
+            <a href="/contact" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
               제휴문의
-            </Link>
+            </a>
 
             {isLoggedIn ? (
               <div
@@ -170,19 +169,19 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 {isUserMenuOpen && (
                   <div className="absolute top-full right-0 min-w-[140px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
                     {userData?.level >= 9 && (
-                      <Link
+                      <a
                         href="/admin/dashboard"
                         className="block px-4 py-2.5 text-sm font-bold text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors whitespace-nowrap"
                       >
                         관리자
-                      </Link>
+                      </a>
                     )}
-                    <Link
+                    <a
                       href="/mypage"
                       className="block px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors whitespace-nowrap"
                     >
                       정보수정
-                    </Link>
+                    </a>
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors whitespace-nowrap"
@@ -195,14 +194,14 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
             ) : (
               <>
                 {authMode !== "NONE" && (
-                  <Link href="/login" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
+                  <a href="/login" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
                     로그인
-                  </Link>
+                  </a>
                 )}
                 {authMode === "ALL" && (
-                  <Link href="/register" className="text-[13px] font-extrabold px-5 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm whitespace-nowrap">
+                  <a href="/register" className="text-[13px] font-extrabold px-5 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm whitespace-nowrap">
                     회원가입
-                  </Link>
+                  </a>
                 )}
               </>
             )}
@@ -223,13 +222,13 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
             {menus.map((menu) => (
               <div key={menu.id} className="border-b border-slate-100 dark:border-slate-800 last:border-none">
                 <div className="flex items-center justify-between px-6 py-4">
-                  <Link
+                  <a
                     href={menu.url || "#"}
                     className="text-base font-bold text-slate-800 dark:text-slate-100"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {menu.name}
-                  </Link>
+                  </a>
                   {menu.children && menu.children.length > 0 && (
                     <button
                       onClick={() => setOpenDropdownId(openDropdownId === menu.id ? null : menu.id)}
@@ -243,14 +242,14 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 {menu.children && menu.children.length > 0 && openDropdownId === menu.id && (
                   <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-3 flex flex-col gap-3">
                     {menu.children.map((child) => (
-                      <Link
+                      <a
                         key={child.id}
                         href={child.url || "#"}
                         className="text-sm font-medium text-slate-600 dark:text-slate-400 pl-4 border-l-2 border-indigo-200 dark:border-indigo-900"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
                         {child.name}
-                      </Link>
+                      </a>
                     ))}
                   </div>
                 )}
@@ -266,39 +265,39 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
               </div>
               
               {/* 💡 모바일용 고객지원 버튼 추가 */}
-              <Link
+              <a
                 href="/support"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
               >
                 고객지원
-              </Link>
+              </a>
 
-              <Link
+              <a
                 href="/contact"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
               >
                 제휴문의
-              </Link>
+              </a>
 
               {userData?.level >= 9 && (
-                <Link
+                <a
                   href="/admin/dashboard"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="w-full py-3 text-center text-sm font-extrabold text-white bg-emerald-500 rounded-xl shadow-sm hover:bg-emerald-600 transition"
                 >
                   관리자 페이지
-                </Link>
+                </a>
               )}
 
-              <Link
+              <a
                 href="/mypage"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="w-full py-3 text-center text-sm font-extrabold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition"
               >
                 정보수정
-              </Link>
+              </a>
               <button
                 onClick={handleLogout}
                 className="w-full py-3 text-center text-sm font-extrabold text-white bg-slate-800 rounded-xl shadow-sm hover:bg-slate-900 transition"
@@ -311,37 +310,37 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
               <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3 bg-slate-50 dark:bg-slate-800/30 mt-auto">
                 
                 {/* 💡 모바일용 고객지원 버튼 추가 */}
-                <Link
+                <a
                   href="/support"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
                 >
                   고객지원
-                </Link>
+                </a>
 
-                <Link
+                <a
                   href="/contact"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
                 >
                   제휴문의
-                </Link>
+                </a>
 
-                <Link
+                <a
                   href="/login"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="w-full py-3 text-center text-sm font-extrabold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition"
                 >
                   로그인
-                </Link>
+                </a>
                 {authMode === "ALL" && (
-                  <Link
+                  <a
                     href="/register"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="w-full py-3 text-center text-sm font-extrabold text-white bg-indigo-600 rounded-xl shadow-sm hover:bg-indigo-700 transition"
                   >
                     회원가입
-                  </Link>
+                  </a>
                 )}
               </div>
             )
