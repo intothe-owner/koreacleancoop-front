@@ -216,14 +216,35 @@ export default function VisualPageBuilder() {
         try {
             const url = pageId ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/${pageId}` : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages`;
             const res = await fetch(url, { method: pageId ? "PUT" : "POST", body: formData });
-            const json = await res.json();
+            // 응답이 413/502 등의 HTML이거나 빈 본문이어도 실제 오류를 확인할 수 있게 한다.
+            const responseText = await res.text();
+            let json: any = null;
+
+            try {
+                json = responseText ? JSON.parse(responseText) : null;
+            } catch {
+                // nginx/호스팅 프록시가 반환한 HTML 응답 등
+            }
+
+            if (!res.ok) {
+                const detail = json?.message || responseText.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+                throw new Error(`페이지 저장 실패 (HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""})${detail ? `: ${detail.slice(0, 300)}` : ""}`);
+            }
+
+            if (!json) {
+                throw new Error(`페이지 저장 응답이 JSON 형식이 아닙니다 (HTTP ${res.status})`);
+            }
+
             if (json.success) {
                 alert(pageId ? "수정되었습니다." : "생성되었습니다.");
                 await loadPageData(selectedMenuId);
             } else alert("저장 실패: " + json.message);
         } catch (error) {
-            console.log(error); 
-            alert("서버와 통신 중 오류가 발생했습니다."); 
+            const message = error instanceof Error ? error.message : String(error);
+            console.error("페이지 저장 오류:", error);
+            alert(message === "Failed to fetch"
+                ? "서버에 연결하지 못했습니다. API 주소, CORS, HTTPS 설정을 확인해주세요."
+                : message);
         }
     };
 
