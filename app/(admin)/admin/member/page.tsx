@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, Edit2, Trash2, List, Shield, Search, Loader2 } from "lucide-react"; // 💡 Search 아이콘 추가 확인
+import { Users, Edit2, Trash2, List, Shield, Search, Loader2, FileText, CheckCircle } from "lucide-react"; // 💡 Search 아이콘 추가 확인
 
 const LEVEL_NAMES: Record<number, string> = {
   0: "차단/대기", 1: "일반회원", 2: "정회원", 3: "우수회원", 4: "VIP회원",
@@ -20,6 +20,8 @@ export default function MemberManager() {
   const [searchType, setSearchType] = useState("loginId");
   const [keyword, setKeyword] = useState("");
 
+  const [filterLevel, setFilterLevel] = useState<"ALL" | "0">("ALL");
+
   const initialForm = {
     id: 0, loginId: "", name: "", nickname: "", phone: "", mobile: "", address: "", level: 1, password: "", createdAt: ""
   };
@@ -31,10 +33,9 @@ export default function MemberManager() {
   });
 
   // 1. 회원 목록 조회 (💡 검색 파라미터 추가)
-  const fetchMembers = async (currentPage = 1) => {
+  const fetchMembers = async (currentPage = 1, currentFilter = filterLevel) => {
     setIsLoading(true);
     try {
-      // URLSearchParams를 활용하여 쿼리스트링 동적 생성
       const queryParams = new URLSearchParams({
         page: String(currentPage),
         limit: "15",
@@ -42,6 +43,10 @@ export default function MemberManager() {
       if (keyword) {
         queryParams.append("searchType", searchType);
         queryParams.append("keyword", keyword);
+      }
+      // ✨ 특정 레벨 필터가 활성화된 경우 추가
+      if (currentFilter !== "ALL") {
+        queryParams.append("level", currentFilter);
       }
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/members?${queryParams.toString()}`, {
@@ -61,7 +66,7 @@ export default function MemberManager() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
     fetchMembers(1);
@@ -71,6 +76,28 @@ export default function MemberManager() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchMembers(1); // 검색 시 1페이지로 이동
+  };
+
+  // ✨ 신규: 가입 승인 처리
+  const handleApprove = async (id: number) => {
+    if (!confirm("해당 회원의 가입을 승인하시겠습니까?\n설정된 기본 회원 등급으로 상향됩니다.")) return;
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/members/${id}/approve`, {
+        method: "PATCH",
+        headers: getAuthHeaders()
+      });
+      const json = await res.json();
+      
+      if (res.ok && json.success) {
+        alert("승인되었습니다.");
+        fetchMembers(page);
+      } else {
+        alert(json.message || "승인 처리에 실패했습니다.");
+      }
+    } catch (error) {
+      alert("서버 오류가 발생했습니다.");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,24 +176,30 @@ export default function MemberManager() {
       {viewMode === "LIST" && (
         <div className="space-y-4">
           
-          {/* 💡 검색 바 추가 */}
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-            <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
-              <select 
-                value={searchType}
-                onChange={(e) => setSearchType(e.target.value)}
-                className="border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500 w-32"
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+            {/* ✨ 상태 필터 탭 */}
+            <div className="flex gap-2 w-full md:w-auto">
+              <button 
+                onClick={() => { setFilterLevel("ALL"); fetchMembers(1, "ALL"); }}
+                className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${filterLevel === "ALL" ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
+                전체 회원
+              </button>
+              <button 
+                onClick={() => { setFilterLevel("0"); fetchMembers(1, "0"); }}
+                className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${filterLevel === "0" ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                승인 대기 (미승인)
+              </button>
+            </div>
+
+            {/* 검색 폼 */}
+            <form onSubmit={handleSearch} className="flex gap-2 w-full md:w-auto">
+              <select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500 w-28">
                 <option value="loginId">아이디</option>
                 <option value="name">이름</option>
               </select>
-              <input 
-                type="text" 
-                placeholder="검색어를 입력하세요..."
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                className="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500"
-              />
+              <input type="text" placeholder="검색어 입력..." value={keyword} onChange={(e) => setKeyword(e.target.value)} className="flex-1 md:w-48 border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500" />
               <button type="submit" className="bg-slate-800 text-white px-4 rounded-lg flex items-center gap-2">
                 <Search size={16} /> 검색
               </button>
@@ -174,7 +207,6 @@ export default function MemberManager() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
-            
             {isLoading && (
               <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-sm flex items-center justify-center">
                 <Loader2 className="animate-spin text-indigo-600" size={32} />
@@ -189,7 +221,7 @@ export default function MemberManager() {
                   <th className="p-4 font-bold">이름/닉네임</th>
                   <th className="p-4 font-bold">등급(권한)</th>
                   <th className="p-4 font-bold">가입일</th>
-                  <th className="p-4 font-bold text-center w-28">관리</th>
+                  <th className="p-4 font-bold text-center w-36">관리</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,11 +230,19 @@ export default function MemberManager() {
                     <td className="p-4 text-center text-slate-500">{m.id}</td>
                     <td className="p-4 font-bold text-slate-800">{m.loginId}</td>
                     <td className="p-4">
-                      <div className="font-medium">{m.name}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        {m.name}
+                        {m.approvalFileUrl && (
+                          <a href={m.approvalFileUrl} target="_blank" rel="noreferrer" title="승인 서류 보기" className="text-indigo-500 hover:text-indigo-700">
+                            <FileText size={14} />
+                          </a>
+                        )}
+                      </div>
                       <div className="text-xs text-slate-400">{m.nickname || '-'}</div>
                     </td>
                     <td className="p-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                        m.level === 0 ? 'bg-amber-100 text-amber-700' :
                         m.level >= 9 ? 'bg-rose-100 text-rose-700' : 'bg-indigo-50 text-indigo-700'
                       }`}>
                         LV.{m.level} {LEVEL_NAMES[m.level] || "알수없음"}
@@ -212,18 +252,16 @@ export default function MemberManager() {
                       {new Date(m.createdAt).toLocaleDateString()}
                     </td>
                     <td className="p-4 text-center">
-                      <button 
-                        onClick={() => { setFormData({ ...m, password: "" }); setViewMode("FORM"); }} 
-                        className="text-indigo-600 hover:text-indigo-800 mr-3 transition-colors"
-                        title="수정"
-                      >
+                      {/* ✨ 레벨 0일 때 노출되는 [승인] 버튼 */}
+                      {m.level === 0 && (
+                        <button onClick={() => handleApprove(m.id)} className="text-emerald-500 hover:text-emerald-700 mr-3 transition-colors" title="가입 승인">
+                          <CheckCircle size={18}/>
+                        </button>
+                      )}
+                      <button onClick={() => { setFormData({ ...m, password: "" }); setViewMode("FORM"); }} className="text-indigo-600 hover:text-indigo-800 mr-3 transition-colors" title="수정">
                         <Edit2 size={16}/>
                       </button>
-                      <button 
-                        onClick={() => handleDelete(m.id, m.level)} 
-                        className="text-red-400 hover:text-red-600 transition-colors"
-                        title="삭제"
-                      >
+                      <button onClick={() => handleDelete(m.id, m.level)} className="text-red-400 hover:text-red-600 transition-colors" title="삭제">
                         <Trash2 size={16}/>
                       </button>
                     </td>
@@ -238,7 +276,7 @@ export default function MemberManager() {
               </tbody>
             </table>
 
-            {/* 페이지네이션 */}
+            {/* 페이지네이션 (기존과 동일) */}
             {totalPages > 1 && (
               <div className="p-4 border-t border-slate-100 flex justify-center gap-2">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (

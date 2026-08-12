@@ -19,6 +19,7 @@ export default function MemberSettingsPage() {
     useApproval: false,
     approvalType: "DOCUMENT",
     approvalNotice: "",
+    approvalWaitLevel: 0,
 
     useTermsOfService: true,
     usePrivacyPolicy: true,
@@ -57,6 +58,7 @@ export default function MemberSettingsPage() {
             useApproval: Boolean(json.data.useApproval),
             approvalType: json.data.approvalType || "DOCUMENT",
             approvalNotice: s(json.data.approvalNotice),
+            approvalWaitLevel: json.data.approvalWaitLevel ?? 0,
 
             useTermsOfService: Boolean(json.data.useTermsOfService ?? true),
             usePrivacyPolicy: Boolean(json.data.usePrivacyPolicy ?? true),
@@ -249,6 +251,21 @@ export default function MemberSettingsPage() {
 
               {formData.useApproval && (
                 <div className="space-y-4 pt-4 border-t border-slate-200">
+                  {/* ✨ 승인 대기 회원 레벨 선택 추가 */}
+                  <div>
+                    <label className={labelClass}>승인 대기 회원 임시 권한 (Wait Level)</label>
+                    <select name="approvalWaitLevel" value={formData.approvalWaitLevel} onChange={handleChange} className={inputClass}>
+                      {Array.from({ length: 11 }, (_, i) => (
+                        <option key={i} value={i}>
+                          레벨 {i} ({formData.levelNames[i] || `권한 ${i}`})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">
+                      가입 직후 관리자 승인이 완료되기 전까지 임시로 부여될 레벨입니다. (일반적으로 레벨 0 지정)
+                    </p>
+                  </div>
+
                   <div>
                     <label className={labelClass}>승인 방식 선택</label>
                     <select name="approvalType" value={formData.approvalType} onChange={handleChange} className={inputClass}>

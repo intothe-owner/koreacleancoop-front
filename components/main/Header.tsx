@@ -82,7 +82,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 w-full">
 
         <div className="w-auto md:w-1/4 flex items-center">
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+          <a href="/" className="flex items-center gap-2 flex-shrink-0">
             {logoUrl ? (
               <img src={logoUrl} alt={siteName} className="w-[150px] h-auto max-h-12 object-contain" />
             ) : (
@@ -90,7 +90,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 {siteName}
               </span>
             )}
-          </Link>
+          </a>
         </div>
 
         <nav className="hidden md:flex flex-1 justify-center items-center gap-4 lg:gap-8">

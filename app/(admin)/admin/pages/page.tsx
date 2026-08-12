@@ -25,6 +25,16 @@ export default function VisualPageBuilder() {
     const [pageMeta, setPageMeta] = useState({ bgImage: '', bgTitle: '' });
     const [metaBgFile, setMetaBgFile] = useState<File | null>(null);
 
+    // 💡 [핵심 수정] 줄바꿈(\n)과 탭(\t)을 스페이스바 한 칸(' ')으로 변경하는 함수
+    // 컴포넌트 스코프 상단에 배치하여 어디서든 사용할 수 있게 합니다.
+    const cleanHtml = (html: string | undefined) => {
+        if (!html) return "";
+        return html
+            .replace(/[\r\n\t]+/g, ' ') // 1. 엔터, 캐리지리턴, 탭을 공백 1칸으로 치환
+            .replace(/\s{2,}/g, ' ')    // 2. 연속된 2칸 이상의 공백을 1칸으로 압축
+            .trim();
+    };
+
     const defaultSlide: SlideItem = {
         type: "image", mediaUrl: "", titleHtml: "", descHtml: "",
         titleStyle: { fontSize: 24, color: "#1e293b", fontFamily: "default", textAlign: "left" },
@@ -138,22 +148,32 @@ export default function VisualPageBuilder() {
                     page = json.data.find((p: any) => p.menuId === targetMenuId);
                 }
                 if (page) {
-                    setPageId(page.id); setContainers(page.contentBlocks || []);
+                    setPageId(page.id);
+                    
+                    // 💡 저장된 데이터 불러올 때도 여백 정리 적용
+                    const cleanedContainers = (page.contentBlocks || []).map((container: ContainerNode) => ({
+                        ...container,
+                        columns: container.columns.map(col => ({
+                            ...col,
+                            elements: col.elements.map(el => ({
+                                ...el,
+                                content: cleanHtml(el.content)
+                            }))
+                        }))
+                    }));
+                    setContainers(cleanedContainers);
 
                     const savedMeta = page.pageMeta || { bgImage: '', bgTitle: '' };
                     setPageMeta(savedMeta);
 
-                    // 💡 슬라이드가 있으면 슬라이드 타입 설정
                     if (page.sliderData && page.sliderData.length > 0) {
                         setSlides(page.sliderData);
                         setSliderType(page.sliderData[0].type || "image");
                     }
-                    // 💡 슬라이드는 없는데 메타(헤더)가 있으면 헤더 타입으로 설정
                     else if (savedMeta.bgImage || savedMeta.bgTitle) {
                         setSlides([]);
                         setSliderType("header");
                     }
-                    // 💡 둘 다 없으면 none
                     else {
                         setSlides([]);
                         setSliderType("none");
@@ -216,35 +236,14 @@ export default function VisualPageBuilder() {
         try {
             const url = pageId ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/${pageId}` : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages`;
             const res = await fetch(url, { method: pageId ? "PUT" : "POST", body: formData });
-            // 응답이 413/502 등의 HTML이거나 빈 본문이어도 실제 오류를 확인할 수 있게 한다.
-            const responseText = await res.text();
-            let json: any = null;
-
-            try {
-                json = responseText ? JSON.parse(responseText) : null;
-            } catch {
-                // nginx/호스팅 프록시가 반환한 HTML 응답 등
-            }
-
-            if (!res.ok) {
-                const detail = json?.message || responseText.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-                throw new Error(`페이지 저장 실패 (HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""})${detail ? `: ${detail.slice(0, 300)}` : ""}`);
-            }
-
-            if (!json) {
-                throw new Error(`페이지 저장 응답이 JSON 형식이 아닙니다 (HTTP ${res.status})`);
-            }
-
+            const json = await res.json();
             if (json.success) {
                 alert(pageId ? "수정되었습니다." : "생성되었습니다.");
                 await loadPageData(selectedMenuId);
             } else alert("저장 실패: " + json.message);
         } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            console.error("페이지 저장 오류:", error);
-            alert(message === "Failed to fetch"
-                ? "서버에 연결하지 못했습니다. API 주소, CORS, HTTPS 설정을 확인해주세요."
-                : message);
+            console.log(error); 
+            alert("서버와 통신 중 오류가 발생했습니다."); 
         }
     };
 
@@ -270,7 +269,7 @@ export default function VisualPageBuilder() {
                     const textEl = json.elements.find((el: any) => el.type === 'TEXT');
                     const imgEl = json.elements.find((el: any) => el.type === 'IMAGE');
 
-                    const newTitle = textEl ? textEl.content.replace(/<[^>]*>?/gm, '') : pageMeta.bgTitle;
+                    const newTitle = textEl ? cleanHtml(textEl.content.replace(/<[^>]*>?/gm, '')) : pageMeta.bgTitle;
                     const newBg = imgEl ? imgEl.content : pageMeta.bgImage;
 
                     setPageMeta({ bgTitle: newTitle, bgImage: newBg });
@@ -279,7 +278,7 @@ export default function VisualPageBuilder() {
                     const newElements: ElementNode[] = json.elements.map((el: any) => ({
                         id: Math.random().toString(36).substr(2, 9),
                         type: el.type,
-                        content: el.content || "",
+                        content: cleanHtml(el.content), // 💡 함수 적용
                         styles: {
                             fontFamily: "default", fontSize: 16, color: "#000000", textAlign: "left",
                             layerAlign: "flex-start", width: "auto", height: "auto",
@@ -293,7 +292,7 @@ export default function VisualPageBuilder() {
                     setContainers([...containers, newContainer]);
                 }
                 else if (aiTarget.type === 'TEXT' || aiTarget.type === 'IMAGE') {
-                    const newContent = json.elements[0]?.content;
+                    const newContent = cleanHtml(json.elements[0]?.content); // 💡 함수 적용
                     if (newContent) {
                         setContainers(containers.map(container => ({
                             ...container,
@@ -310,7 +309,7 @@ export default function VisualPageBuilder() {
                     const newElements: ElementNode[] = json.elements.map((el: any) => ({
                         id: Math.random().toString(36).substr(2, 9),
                         type: el.type,
-                        content: el.content || "",
+                        content: cleanHtml(el.content), // 💡 함수 적용
                         styles: {
                             fontFamily: "default", fontSize: 16, color: "#000000", textAlign: "left",
                             layerAlign: "flex-start", width: "auto", height: "auto",
@@ -419,10 +418,13 @@ export default function VisualPageBuilder() {
         } catch (e) { return false; }
     };
 
+    // 💡 직접 HTML을 덮어쓸 때도 여백 정리 함수(cleanHtml) 적용
     const updateElementHtmlContent = (elementId: string, htmlContent: string) => {
+        const cleanedHtml = cleanHtml(htmlContent);
+
         setContainers(containers.map(container => ({
             ...container, columns: container.columns.map(col => ({
-                ...col, elements: col.elements.map(el => el.id === elementId ? { ...el, content: htmlContent } : el)
+                ...col, elements: col.elements.map(el => el.id === elementId ? { ...el, content: cleanedHtml } : el)
             }))
         })));
     };
@@ -539,8 +541,6 @@ export default function VisualPageBuilder() {
                 setAiModalOpen={(type, id, content) => openAiModal(type as any, id, content)}
             />
 
-
-
             <ContainerBoard
                 containers={containers}
                 setContainers={setContainers}
@@ -567,7 +567,6 @@ export default function VisualPageBuilder() {
                 getCommonBorderColor={getCommonBorderColor}
                 applyToTableCells={applyToTableCells}
                 savedRangeRef={savedRangeRef}
-
                 setAiModalOpen={(type, id, content) => openAiModal(type as any, id, content)}
             />
 
