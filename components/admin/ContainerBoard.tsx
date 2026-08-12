@@ -117,11 +117,11 @@ export default function ContainerBoard({
                                                 >
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-2 z-50 whitespace-nowrap element-toolbar">
-                                                            
+
                                                             {/* 💡 HTML 소스 편집 버튼 */}
-                                                            <button 
-                                                                onMouseDown={(e) => toggleHtmlMode(e, el.id)} 
-                                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors ${htmlModeElements[el.id] ? 'bg-slate-800 text-green-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`} 
+                                                            <button
+                                                                onMouseDown={(e) => toggleHtmlMode(e, el.id)}
+                                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors ${htmlModeElements[el.id] ? 'bg-slate-800 text-green-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                                                 title="HTML 소스 직접 편집"
                                                             >
                                                                 <Code size={14} /> HTML
@@ -283,7 +283,7 @@ export default function ContainerBoard({
                                                             <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(container.id, column.id, el.id, e.target.files[0])} />
                                                         </label>
                                                     )}
-                                                    
+
                                                     {/* URL 링크 설정 창 */}
                                                     <div className="mt-2 flex items-center gap-2 bg-slate-50 p-1.5 border border-slate-200 rounded">
                                                         <LinkIcon size={14} className="text-slate-400" />
@@ -359,9 +359,9 @@ export default function ContainerBoard({
                                                         <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-3 z-50 whitespace-nowrap">
                                                             <input type="text" value={el.buttonStyles.text} onChange={(e) => updateElementProps(container.id, column.id, el.id, 'buttonStyles', 'text', e.target.value)} className="w-20 text-xs border border-slate-200 rounded px-1 py-1" title="버튼 텍스트" />
                                                             <input type="color" value={el.buttonStyles.backgroundColor} onChange={(e) => updateElementProps(container.id, column.id, el.id, 'buttonStyles', 'backgroundColor', e.target.value)} className="w-5 h-5 cursor-pointer" title="버튼 배경색" />
-                                                            
+
                                                             <div className="w-px h-4 bg-slate-300" />
-                                                            
+
                                                             <div className="flex items-center gap-1" title="버튼 클릭 시 이동할 URL">
                                                                 <LinkIcon size={14} className="text-slate-400" />
                                                                 <input
@@ -377,21 +377,21 @@ export default function ContainerBoard({
                                                             <button onClick={() => deleteElement(container.id, column.id, el.id)} className="text-slate-500 hover:text-red-500"><Trash2 size={16} /></button>
                                                         </div>
                                                     )}
-                                                    
-                                                    <a 
+
+                                                    <a
                                                         href={(el.buttonStyles as any).linkUrl || "#"}
-                                                        onClick={(e) => e.preventDefault()} 
-                                                        style={{ 
-                                                            backgroundColor: el.buttonStyles.backgroundColor, 
-                                                            color: el.buttonStyles.color, 
-                                                            fontSize: `${el.buttonStyles.fontSize}px`, 
-                                                            width: String(el.buttonStyles.width) === "auto" ? "auto" : `${el.buttonStyles.width}px`, 
+                                                        onClick={(e) => e.preventDefault()}
+                                                        style={{
+                                                            backgroundColor: el.buttonStyles.backgroundColor,
+                                                            color: el.buttonStyles.color,
+                                                            fontSize: `${el.buttonStyles.fontSize}px`,
+                                                            width: String(el.buttonStyles.width) === "auto" ? "auto" : `${el.buttonStyles.width}px`,
                                                             borderRadius: `${el.buttonStyles.borderRadius}px`,
                                                             display: 'inline-flex',
                                                             justifyContent: 'center',
                                                             alignItems: 'center',
                                                             textDecoration: 'none'
-                                                        }} 
+                                                        }}
                                                         className="px-6 py-2 shadow font-bold mx-auto cursor-pointer"
                                                     >
                                                         {el.buttonStyles.text}
@@ -565,11 +565,11 @@ export default function ContainerBoard({
                                                 <div className="w-full relative" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-0 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-2 z-50 whitespace-nowrap overflow-x-auto">
-                                                            
+
                                                             {/* 💡 HTML 소스 편집 버튼 추가 */}
-                                                            <button 
-                                                                onMouseDown={(e) => toggleHtmlMode(e, el.id)} 
-                                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors ${htmlModeElements[el.id] ? 'bg-slate-800 text-green-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`} 
+                                                            <button
+                                                                onMouseDown={(e) => toggleHtmlMode(e, el.id)}
+                                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors ${htmlModeElements[el.id] ? 'bg-slate-800 text-green-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                                                 title="HTML 소스 직접 편집"
                                                             >
                                                                 <Code size={14} /> HTML
@@ -659,7 +659,7 @@ export default function ContainerBoard({
                                                             <button onClick={() => deleteElement(container.id, column.id, el.id)} className="text-slate-500 hover:text-red-500"><Trash2 size={16} /></button>
                                                         </div>
                                                     )}
-                                                    
+
                                                     {/* 💡 HTML 모드일 때 Textarea 노출 (카드 컴포넌트) */}
                                                     {htmlModeElements[el.id] ? (
                                                         <textarea

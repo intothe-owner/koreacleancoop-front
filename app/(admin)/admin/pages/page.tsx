@@ -389,6 +389,7 @@ export default function VisualPageBuilder() {
                 else if (styleType === 'textDecoration') document.execCommand('underline', false, undefined);
                 else if (styleType === 'color') document.execCommand('foreColor', false, value);
                 else if (styleType === 'fontFamily') document.execCommand('fontName', false, value);
+                else if (styleType === 'link') document.execCommand('createLink', false, value);
                 return true;
             }
         } catch (e) { return false; }

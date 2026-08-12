@@ -93,7 +93,6 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
           </Link>
         </div>
 
-        {/* 💡 gap-10을 gap-4 lg:gap-8로 수정하여 간격 최적화 */}
         <nav className="hidden md:flex flex-1 justify-center items-center gap-4 lg:gap-8">
           {menus.map((menu) => (
             <div
@@ -104,7 +103,6 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
             >
               <Link
                 href={menu.url || "#"}
-                // 💡 whitespace-nowrap 추가: 메뉴명 두 줄로 꺾임 방지
                 className={`flex items-center gap-1 text-[15px] font-bold py-5 transition-colors whitespace-nowrap ${textClasses}`}
               >
                 {menu.name}
@@ -119,7 +117,6 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                     <Link
                       key={child.id}
                       href={child.url || "#"}
-                      // 💡 서브메뉴도 두 줄 꺾임 방지
                       className="block px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors whitespace-nowrap"
                     >
                       {child.name}
@@ -149,7 +146,11 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
 
           <div className="hidden md:flex items-center gap-5 ml-2">
             
-            {/* 💡 whitespace-nowrap 추가: 제휴문의 글자 꺾임 방지 */}
+            {/* 💡 추가된 부분: 고객지원 메뉴 (제휴문의 왼쪽) */}
+            <Link href="/support" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
+              고객지원
+            </Link>
+
             <Link href="/contact" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
               제휴문의
             </Link>
@@ -160,7 +161,6 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 onMouseEnter={() => setIsUserMenuOpen(true)}
                 onMouseLeave={() => setIsUserMenuOpen(false)}
               >
-                {/* 💡 whitespace-nowrap 추가: 사용자 이름 영역 꺾임 방지 */}
                 <div className={`flex items-center gap-1.5 text-[13px] font-extrabold cursor-pointer transition-colors whitespace-nowrap ${textClasses}`}>
                   <UserCircle size={18} />
                   <span>{userData?.name}님</span>
@@ -265,6 +265,15 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 <span className="font-bold text-slate-800 dark:text-white text-lg">{userData?.name}님</span>
               </div>
               
+              {/* 💡 모바일용 고객지원 버튼 추가 */}
+              <Link
+                href="/support"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
+              >
+                고객지원
+              </Link>
+
               <Link
                 href="/contact"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -301,6 +310,15 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
             authMode !== "NONE" && (
               <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3 bg-slate-50 dark:bg-slate-800/30 mt-auto">
                 
+                {/* 💡 모바일용 고객지원 버튼 추가 */}
+                <Link
+                  href="/support"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
+                >
+                  고객지원
+                </Link>
+
                 <Link
                   href="/contact"
                   onClick={() => setIsMobileMenuOpen(false)}
