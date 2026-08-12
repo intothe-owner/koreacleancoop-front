@@ -221,7 +221,10 @@ export default function VisualPageBuilder() {
                 alert(pageId ? "수정되었습니다." : "생성되었습니다.");
                 await loadPageData(selectedMenuId);
             } else alert("저장 실패: " + json.message);
-        } catch (error) { alert("서버와 통신 중 오류가 발생했습니다."); }
+        } catch (error) {
+            console.log(error); 
+            alert("서버와 통신 중 오류가 발생했습니다."); 
+        }
     };
 
     const handleGenerateAI = async () => {
