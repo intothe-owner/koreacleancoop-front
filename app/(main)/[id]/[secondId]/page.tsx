@@ -58,8 +58,8 @@ export default async function NestedSubPage({ params }: NestedSubPageProps) {
       {/* 2. 슬라이드가 없고 배경이미지가 있을 때 헤더 렌더링 */}
       {!hasSlider && meta.bgImage && (
         <div className="relative w-full h-[400px] flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${meta.bgImage})` }}>
-          <div className="absolute inset-0 bg-black/40"></div>
-          <h1 className="relative z-10 text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg">
+          <div className="absolute inset-0 bg-black/40"></div> {/* 오버레이 */}
+          <h1 className="relative z-10 text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mt-20">
             {meta.bgTitle || pageData.title}
           </h1>
         </div>
