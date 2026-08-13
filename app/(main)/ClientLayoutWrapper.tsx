@@ -118,7 +118,7 @@ export default function ClientLayoutWrapper({
   if (!settings) return null;
 
   // 4. 레이아웃 Display 모드 설정
-  let displayClass = "w-full transition-colors duration-300 min-h-screen flex flex-col mx-auto";
+  let displayClass = "w-full transition-colors duration-300 min-h-screen flex flex-col mx-auto pt-24";
   
   switch (settings.displayMode) {
     case "MOBILE_ONLY":
@@ -151,7 +151,7 @@ export default function ClientLayoutWrapper({
           themeMode={settings.themeMode}
         />
         
-        <main className="flex-1 w-full relative pt-24">
+        <main className="flex-1 w-full relative">
           {children}
         </main>
         
