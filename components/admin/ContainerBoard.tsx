@@ -254,7 +254,8 @@ export default function ContainerBoard({
                                                 <div className="w-full relative group hover:outline outline-2 outline-indigo-200 rounded">
                                                     {el.content ? (
                                                         <div className="relative border rounded overflow-hidden">
-                                                            <img src={el.content} alt="업로드/생성 이미지" className="w-full h-auto object-cover max-h-64" />
+                                                            {/* 💡 수정 1: 이미지가 엑박(Broken)이어도 버튼을 클릭할 수 있도록 min-h-[100px]와 기본 배경색(bg-slate-100) 추가 */}
+                                                            <img src={el.content} alt="업로드/생성 이미지" className="w-full h-auto object-cover max-h-64 min-h-[100px] bg-slate-100" />
 
                                                             {el.content.includes("pollinations.ai") && (
                                                                 <div className="absolute top-0 left-0 w-full h-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-3">
@@ -272,9 +273,19 @@ export default function ContainerBoard({
                                                                 </div>
                                                             )}
 
-                                                            <button onClick={() => deleteElement(container.id, column.id, el.id)} className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded shadow hover:bg-red-700 z-10">
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            {/* 💡 수정 2: 우측 상단에 [변경] 버튼을 추가하고 [삭제] 버튼과 나란히 배치 */}
+                                                            <div className="absolute top-2 right-2 flex items-center gap-2 z-20">
+                                                                <label className="flex items-center gap-1 p-1.5 bg-indigo-600 text-white rounded shadow hover:bg-indigo-700 cursor-pointer transition-colors" title="이미지 변경">
+                                                                    <ImagePlus size={14} />
+                                                                    <span className="text-xs font-bold px-1 cursor-pointer">변경</span>
+                                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                                                        if (e.target.files?.[0]) handleFileUpload(container.id, column.id, el.id, e.target.files[0]);
+                                                                    }} />
+                                                                </label>
+                                                                <button onClick={() => deleteElement(container.id, column.id, el.id)} className="p-1.5 bg-red-600 text-white rounded shadow hover:bg-red-700 transition-colors" title="삭제">
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     ) : (
                                                         <label onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.[0]) handleFileUpload(container.id, column.id, el.id, e.dataTransfer.files[0]); }} className="h-40 bg-slate-50 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 rounded cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/20 transition w-full">
