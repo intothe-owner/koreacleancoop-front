@@ -1,7 +1,7 @@
 // src/app/(admin)/admin/statistics/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { BarChart2, Calendar, Search, Loader2, MousePointerClick, Activity } from "lucide-react";
 
 export default function StatisticsManager() {
@@ -9,14 +9,15 @@ export default function StatisticsManager() {
   const [statsData, setStatsData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 시간별 통계 필터 상태
   const [timeType, setTimeType] = useState("daily");
   
-  // 기본 날짜 설정 (최근 7일)
-  const getInitialDate = (offsetDays: number) => {
+  // 💡 월/년 단위도 계산할 수 있도록 유틸 함수 보강
+  const getInitialDate = (offsetDays: number = 0, offsetMonths: number = 0, offsetYears: number = 0) => {
     const d = new Date();
+    d.setFullYear(d.getFullYear() - offsetYears);
+    d.setMonth(d.getMonth() - offsetMonths);
     d.setDate(d.getDate() - offsetDays);
-    // KST 기준 YYYY-MM-DD 추출을 위해 시간 보정
+    
     const kstOffset = 9 * 60 * 60 * 1000;
     return new Date(d.getTime() + kstOffset).toISOString().split('T')[0];
   };
@@ -25,7 +26,7 @@ export default function StatisticsManager() {
   const [endDate, setEndDate] = useState(getInitialDate(0));
 
   // 통계 데이터 가져오기
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setIsLoading(true);
     try {
       let url = "";
@@ -49,22 +50,30 @@ export default function StatisticsManager() {
     } finally {
       setIsLoading(false);
     }
+  }, [activeTab, timeType, startDate, endDate]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [activeTab]); // 탭 전환 시 조회
+
+  // 💡 조회 기준 변경 시 날짜를 센스있게 자동 갱신해주는 핸들러
+  const handleTimeTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newType = e.target.value;
+    setTimeType(newType);
+    
+    if (newType === "hourly") setStartDate(getInitialDate(1)); // 1일 전
+    else if (newType === "daily") setStartDate(getInitialDate(7)); // 7일 전
+    else if (newType === "monthly") setStartDate(getInitialDate(0, 6, 0)); // 6개월 전
+    else if (newType === "yearly") setStartDate(getInitialDate(0, 0, 3)); // 3년 전
+    
+    setEndDate(getInitialDate(0)); // 종료일은 항상 오늘
   };
 
-  // 탭이나 필터가 변경될 때마다 자동 조회 (페이지 탭은 즉시 조회)
-  useEffect(() => {
-    if (activeTab === "PAGE") {
-      fetchStats();
-    }
-  }, [activeTab]);
-
-  // 시간별 통계는 '조회' 버튼을 누를 때 갱신하도록 처리
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchStats();
   };
 
-  // 차트 가로 막대 길이를 구하기 위한 최대값 계산
   const maxCount = Math.max(...statsData.map(item => Number(item.visitCount)), 1);
 
   return (
@@ -77,7 +86,6 @@ export default function StatisticsManager() {
         </div>
       </div>
 
-      {/* 탭 네비게이션 */}
       <div className="flex gap-2 border-b border-slate-200">
         <button
           onClick={() => setActiveTab("TIME")}
@@ -101,7 +109,6 @@ export default function StatisticsManager() {
         </button>
       </div>
 
-      {/* 기간별 통계 필터 (TIME 탭일 때만 표시) */}
       {activeTab === "TIME" && (
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
           <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-4">
@@ -109,7 +116,7 @@ export default function StatisticsManager() {
               <label className="text-xs font-bold text-slate-500">조회 기준</label>
               <select 
                 value={timeType} 
-                onChange={(e) => setTimeType(e.target.value)}
+                onChange={handleTimeTypeChange} /* 💡 수정된 핸들러 연결 */
                 className="border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500"
               >
                 <option value="hourly">시간별 (Hourly)</option>
@@ -152,9 +159,7 @@ export default function StatisticsManager() {
         </div>
       )}
 
-      {/* 통계 결과 테이블 */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative min-h-[300px]">
-        
         {isLoading && (
           <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center flex-col gap-3">
             <Loader2 className="animate-spin text-indigo-600" size={32} />
@@ -180,7 +185,7 @@ export default function StatisticsManager() {
                 
                 return (
                   <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                    <td className="p-4 font-medium text-slate-700">
+                    <td className="p-4 font-medium text-slate-700 break-all">
                       {activeTab === "TIME" ? row.timePeriod : (
                         <a href={row.pageUrl} target="_blank" rel="noreferrer" className="hover:text-indigo-600 hover:underline">
                           {row.pageUrl === "/" ? "/ (메인 페이지)" : row.pageUrl}
