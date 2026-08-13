@@ -3,7 +3,7 @@ export default async function SupportPage() {
   
 
   return (
-    <div className="w-full flex flex-col pb-24">
+    <div className="w-full flex flex-col pb-24 pt-24">
       고객지원
     </div>
   );

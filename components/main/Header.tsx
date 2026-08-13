@@ -65,10 +65,16 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
 
   const isSolid = !hasSlider || isScrolled || isMobileMenuOpen;
 
-  const headerClasses = `fixed top-0 z-50 w-full transition-all duration-300 ${isSolid
-    ? "bg-white/90 backdrop-blur-md border-b border-slate-200 dark:bg-slate-900/90 dark:border-slate-800 shadow-sm"
-    : "bg-transparent border-transparent"
-    }`;
+  // 상단바는 항상 검은색 고정
+  const topBarClasses = "hidden md:flex w-full bg-[#111] dark:bg-black border-b border-white/10";
+  const topBarTextClasses = "text-white/80 hover:text-white transition-colors drop-shadow-sm";
+
+  // 메인 메뉴바는 스크롤에 따라 투명 -> 흰색으로 변경
+  const mainBarClasses = `w-full transition-all duration-300 ${
+    isSolid
+      ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200 dark:bg-slate-900/95 dark:border-slate-800"
+      : "bg-transparent"
+  }`;
 
   const textClasses = isSolid
     ? "text-slate-800 dark:text-slate-200 hover:text-indigo-600"
@@ -77,147 +83,169 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
   const authMode = memberSettings?.memberSystemMode || "ALL";
 
   return (
-    <header className={headerClasses}>
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 w-full">
-
-        <div className="w-auto md:w-1/4 flex items-center">
-          <a href="/" className="flex items-center gap-2 flex-shrink-0">
-            {logoUrl ? (
-              <img src={logoUrl} alt={siteName} className="w-[150px] h-auto max-h-12 object-contain" />
-            ) : (
-              <span className={`text-xl font-extrabold transition-colors whitespace-nowrap ${isSolid ? "text-slate-900 dark:text-white" : "text-white drop-shadow-md"}`}>
-                {siteName}
-              </span>
-            )}
-          </a>
-        </div>
-
-        <nav className="hidden md:flex flex-1 justify-center items-center gap-4 lg:gap-8">
-          {menus.map((menu) => (
-            <div
-              key={menu.id}
-              className="relative group"
-              onMouseEnter={() => setOpenDropdownId(menu.id)}
-              onMouseLeave={() => setOpenDropdownId(null)}
-            >
-              <a
-                href={menu.url || "#"}
-                className={`flex items-center gap-1 text-[15px] font-bold py-5 transition-colors whitespace-nowrap ${textClasses}`}
-              >
-                {menu.name}
-                {menu.children && menu.children.length > 0 && (
-                  <ChevronDown size={14} className="opacity-70 group-hover:rotate-180 transition-transform" />
-                )}
-              </a>
-
-              {menu.children && menu.children.length > 0 && openDropdownId === menu.id && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[160px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
-                  {menu.children.map((child) => (
-                    <a
-                      key={child.id}
-                      href={child.url || "#"}
-                      className="block px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors whitespace-nowrap"
-                    >
-                      {child.name}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-
-        <div className="w-auto md:w-1/4 flex justify-end items-center gap-2 sm:gap-4">
-
+    <header className="fixed top-0 z-50 w-full flex flex-col">
+      {/* 1단: 상단 유틸리티 메뉴 (항상 검정색 배경) */}
+      <div className={topBarClasses}>
+        <div className="mx-auto flex h-10 max-w-7xl items-center justify-end px-4 sm:px-6 w-full gap-5">
+          
           {themeMode === "MENUAL" && (
             <button
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-              className={`p-2 rounded-full transition-colors ${isSolid ? "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800" : "text-white hover:bg-black/20"}`}
+              className={`p-1 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors`}
               aria-label="테마 변경"
             >
               {mounted ? (
-                resolvedTheme === "dark" ? <Sun size={20} /> : <Moon size={20} />
+                resolvedTheme === "dark" ? <Sun size={15} /> : <Moon size={15} />
               ) : (
-                <div className="w-5 h-5" />
+                <div className="w-4 h-4" />
               )}
             </button>
           )}
 
-          <div className="hidden md:flex items-center gap-5 ml-2">
-            
-            {/* 💡 추가된 부분: 고객지원 메뉴 (제휴문의 왼쪽) */}
-            <a href="/support" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
-              고객지원
-            </a>
+          <a href="/support" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
+            고객지원
+          </a>
+          <a href="/contact" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
+            제휴문의
+          </a>
 
-            <a href="/contact" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
-              제휴문의
-            </a>
-
-            {isLoggedIn ? (
-              <div
-                className="relative group py-5"
-                onMouseEnter={() => setIsUserMenuOpen(true)}
-                onMouseLeave={() => setIsUserMenuOpen(false)}
-              >
-                <div className={`flex items-center gap-1.5 text-[13px] font-extrabold cursor-pointer transition-colors whitespace-nowrap ${textClasses}`}>
-                  <UserCircle size={18} />
-                  <span>{userData?.name}님</span>
-                  <ChevronDown size={14} className="opacity-70 group-hover:rotate-180 transition-transform" />
-                </div>
-
-                {isUserMenuOpen && (
-                  <div className="absolute top-full right-0 min-w-[140px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
-                    {userData?.level >= 9 && (
-                      <a
-                        href="/admin/dashboard"
-                        className="block px-4 py-2.5 text-sm font-bold text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors whitespace-nowrap"
-                      >
-                        관리자
-                      </a>
-                    )}
-                    <a
-                      href="/mypage"
-                      className="block px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors whitespace-nowrap"
-                    >
-                      정보수정
-                    </a>
-                    <button
-                      onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors whitespace-nowrap"
-                    >
-                      로그아웃
-                    </button>
-                  </div>
-                )}
+          {isLoggedIn ? (
+            <div
+              className="relative group h-full flex items-center cursor-pointer"
+              onMouseEnter={() => setIsUserMenuOpen(true)}
+              onMouseLeave={() => setIsUserMenuOpen(false)}
+            >
+              <div className={`flex items-center gap-1.5 text-[12px] font-medium whitespace-nowrap py-2 ${topBarTextClasses}`}>
+                <UserCircle size={15} />
+                <span>{userData?.name}님</span>
+                <ChevronDown size={12} className="opacity-70 group-hover:rotate-180 transition-transform" />
               </div>
-            ) : (
-              <>
-                {authMode !== "NONE" && (
-                  <a href="/login" className={`text-[13px] font-extrabold transition-colors whitespace-nowrap ${textClasses}`}>
-                    로그인
-                  </a>
-                )}
-                {authMode === "ALL" && (
-                  <a href="/register" className="text-[13px] font-extrabold px-5 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm whitespace-nowrap">
-                    회원가입
-                  </a>
-                )}
-              </>
-            )}
-          </div>
 
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className={`p-2 md:hidden rounded-lg transition-colors ${isSolid ? "text-slate-600 dark:text-slate-300 hover:bg-slate-100" : "text-white hover:bg-black/20"}`}
-          >
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+              {/* 이름 마우스 호버 시 나오는 서브메뉴 */}
+              {isUserMenuOpen && (
+                <div className="absolute top-[35px] right-0 min-w-[140px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
+                  {userData?.level >= 9 && (
+                    <a
+                      href="/admin/dashboard"
+                      className="block px-4 py-2 text-sm font-bold text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors whitespace-nowrap"
+                    >
+                      관리자
+                    </a>
+                  )}
+                  <a
+                    href="/mypage"
+                    className="block px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors whitespace-nowrap"
+                  >
+                    정보수정
+                  </a>
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors whitespace-nowrap"
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              {authMode !== "NONE" && (
+                <a href="/login" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
+                  로그인
+                </a>
+              )}
+              {authMode === "ALL" && (
+                <a href="/register" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
+                  회원가입
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
+      {/* 2단: 로고 및 메인 메뉴 (스크롤 시 흰색 배경) */}
+      <div className={mainBarClasses}>
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 w-full">
+
+          {/* 로고 영역 */}
+          <div className="w-auto flex items-center">
+            <a href="/" className="flex items-center gap-2 flex-shrink-0">
+              {logoUrl ? (
+                <img src={logoUrl} alt={siteName} className="w-[150px] h-auto max-h-12 object-contain" />
+              ) : (
+                <span className={`text-xl font-extrabold transition-colors whitespace-nowrap ${isSolid ? "text-slate-900 dark:text-white" : "text-white drop-shadow-md"}`}>
+                  {siteName}
+                </span>
+              )}
+            </a>
+          </div>
+
+          {/* 메인 네비게이션 (오른쪽 정렬) */}
+          <nav className="hidden md:flex flex-1 justify-end items-center gap-4 lg:gap-8 ml-8">
+            {menus.map((menu) => (
+              <div
+                key={menu.id}
+                className="relative group"
+                onMouseEnter={() => setOpenDropdownId(menu.id)}
+                onMouseLeave={() => setOpenDropdownId(null)}
+              >
+                <a
+                  href={menu.url || "#"}
+                  className={`flex items-center gap-1 text-[16px] font-bold py-5 transition-colors whitespace-nowrap ${textClasses}`}
+                >
+                  {menu.name}
+                  {menu.children && menu.children.length > 0 && (
+                    <ChevronDown size={14} className="opacity-70 group-hover:rotate-180 transition-transform" />
+                  )}
+                </a>
+
+                {menu.children && menu.children.length > 0 && openDropdownId === menu.id && (
+                  <div className="absolute top-[60px] left-1/2 -translate-x-1/2 min-w-[160px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
+                    {menu.children.map((child) => (
+                      <a
+                        key={child.id}
+                        href={child.url || "#"}
+                        className="block px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors whitespace-nowrap"
+                      >
+                        {child.name}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </nav>
+
+          {/* 모바일 햄버거 버튼 영역 */}
+          <div className="md:hidden flex items-center gap-2">
+            {themeMode === "MENUAL" && (
+              <button
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className={`p-2 rounded-full transition-colors ${isSolid ? "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800" : "text-white hover:bg-black/20"}`}
+                aria-label="테마 변경"
+              >
+                {mounted ? (
+                  resolvedTheme === "dark" ? <Sun size={20} /> : <Moon size={20} />
+                ) : (
+                  <div className="w-5 h-5" />
+                )}
+              </button>
+            )}
+            
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className={`p-2 rounded-lg transition-colors ${isSolid ? "text-slate-600 dark:text-slate-300 hover:bg-slate-100" : "text-white hover:bg-black/20"}`}
+            >
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 모바일 전체 메뉴 오픈 시 나타나는 레이어 */}
       {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-16 left-0 w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto flex flex-col">
+        <div className="md:hidden absolute top-[104px] left-0 w-full bg-white dark:bg-slate-900 shadow-lg max-h-[calc(100vh-6.5rem)] overflow-y-auto flex flex-col">
           <nav className="flex flex-col py-2">
             {menus.map((menu) => (
               <div key={menu.id} className="border-b border-slate-100 dark:border-slate-800 last:border-none">
@@ -257,6 +285,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
             ))}
           </nav>
 
+          {/* 모바일 하단 유틸리티 메뉴 */}
           {isLoggedIn ? (
             <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3 bg-slate-50 dark:bg-slate-800/30 mt-auto">
               <div className="flex items-center gap-2 mb-2 px-2">
@@ -264,22 +293,22 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 <span className="font-bold text-slate-800 dark:text-white text-lg">{userData?.name}님</span>
               </div>
               
-              {/* 💡 모바일용 고객지원 버튼 추가 */}
-              <a
-                href="/support"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
-              >
-                고객지원
-              </a>
-
-              <a
-                href="/contact"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
-              >
-                제휴문의
-              </a>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <a
+                  href="/support"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="py-2.5 text-center text-sm font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
+                >
+                  고객지원
+                </a>
+                <a
+                  href="/contact"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="py-2.5 text-center text-sm font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
+                >
+                  제휴문의
+                </a>
+              </div>
 
               {userData?.level >= 9 && (
                 <a
@@ -308,23 +337,22 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
           ) : (
             authMode !== "NONE" && (
               <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3 bg-slate-50 dark:bg-slate-800/30 mt-auto">
-                
-                {/* 💡 모바일용 고객지원 버튼 추가 */}
-                <a
-                  href="/support"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
-                >
-                  고객지원
-                </a>
-
-                <a
-                  href="/contact"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full py-3 text-center text-sm font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
-                >
-                  제휴문의
-                </a>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <a
+                    href="/support"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="py-2.5 text-center text-sm font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
+                  >
+                    고객지원
+                  </a>
+                  <a
+                    href="/contact"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="py-2.5 text-center text-sm font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
+                  >
+                    제휴문의
+                  </a>
+                </div>
 
                 <a
                   href="/login"
