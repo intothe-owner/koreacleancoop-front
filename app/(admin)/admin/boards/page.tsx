@@ -33,6 +33,7 @@ interface BoardConfig {
   videoAutoPlay: boolean;
   mainExposureCount: number;
   fileUploadCount: number;
+  useEditor: boolean;
 }
 
 const initialFormState: Partial<BoardConfig> = {
@@ -41,7 +42,7 @@ const initialFormState: Partial<BoardConfig> = {
   useComment: false, commentWriteLevel: 1, showOnMain: false, exposureOrder: 0, // 💡 기본 순서 0
   useCaptcha: true, useExtraFields: false, extraFields: [], 
   galleryCols: 3, galleryRows: 3, useVideo: false, videoAutoPlay: false,
-  mainExposureCount: 5, fileUploadCount: 2,
+  mainExposureCount: 5, fileUploadCount: 2,useEditor: true,
 };
 
 export default function BoardConfigManager() {
@@ -296,6 +297,10 @@ export default function BoardConfigManager() {
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="useEditor" checked={formData.useEditor} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300" />
+                <span className="text-sm font-bold text-slate-700">에디터 사용 여부 (WYSIWYG 및 이미지 첨부)</span>
+              </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" name="useComment" checked={formData.useComment} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300" />
                   <span className="text-sm font-bold text-slate-700">댓글 사용 여부</span>

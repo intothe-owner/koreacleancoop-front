@@ -1,4 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato&family=Merriweather&family=Montserrat&family=Noto+Sans+KR:wght@400;700&family=Open+Sans&family=Oswald&family=Playfair+Display&family=Raleway&family=Roboto&family=Ubuntu&display=swap');
 @import "tailwindcss";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

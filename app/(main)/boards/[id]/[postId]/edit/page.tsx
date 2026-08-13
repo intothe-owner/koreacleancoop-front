@@ -3,6 +3,7 @@
 
 import { useState, use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import CustomEditor from '@/components/main/CustomEditor'; // 💡 커스텀 에디터 임포트
 
 export default function PostEditPage({ params }: { params: Promise<{ id: string, postId: string }> }) {
   const router = useRouter();
@@ -15,14 +16,15 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ writerName: '', password: '', title: '', content: '', category: '' });
   
-  // 💡 로그인 상태 확인
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<any>(null);
 
   const [extraData, setExtraData] = useState<Record<string, any>>({});
+  
+  // 💡 새롭게 에디터에 추가되는 이미지를 담는 상태
+  const [editorFiles, setEditorFiles] = useState<{ file: File, id: string }[]>([]);
 
   useEffect(() => {
-    // 로컬 스토리지에서 로그인 정보 확인
     const userStr = localStorage.getItem('user');
     if (userStr) {
       setIsLoggedIn(true);
@@ -36,7 +38,13 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
       if (boardRes.success) setBoardConfig(boardRes.data);
       if (postRes.success) {
         const post = postRes.data;
-        setFormData({ writerName: post.writerName || '', password: '', title: post.title || '', content: post.content || '', category: post.category || '' });
+        setFormData({ 
+          writerName: post.writerName || '', 
+          password: '', 
+          title: post.title || '', 
+          content: post.content || '', 
+          category: post.category || '' 
+        });
         if (post.extraData) setExtraData(post.extraData);
         if (post.mediaUrls) setExistingFiles(typeof post.mediaUrls === 'string' ? JSON.parse(post.mediaUrls) : post.mediaUrls);
       }
@@ -56,34 +64,66 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
     });
   };
 
+  // 💡 에디터 이미지 첨부 훅
+  const handleEditorImageAttach = (file: File, id: string) => {
+    setEditorFiles(prev => [...prev, { file, id }]);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // 내용 유효성 검사
+    const pureText = formData.content.replace(/<[^>]*>?/gm, '').trim();
+    if (!formData.content.includes('<img') && pureText === '') {
+      alert('내용을 입력해주세요.');
+      return;
+    }
+
     setIsSubmitting(true);
     const submitData = new FormData(); 
     
-    // 원래 작성자 이름 유지
     submitData.append('writerName', formData.writerName);
     
-    // 비회원일 경우만 수정을 위한 비밀번호 전송
     if (!isLoggedIn) {
       submitData.append('password', formData.password);
     }
     
     submitData.append('title', formData.title);
-    submitData.append('content', formData.content);
+    
+    // 💡 에디터 본문 이미지 마킹 처리 (새로 추가된 이미지만 cid:id 로 치환)
+    let finalContent = formData.content;
+    if (boardConfig?.useEditor) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = finalContent;
+      const imgs = tempDiv.querySelectorAll('img[data-file-id]');
+      
+      imgs.forEach(img => {
+        const id = img.getAttribute('data-file-id');
+        img.setAttribute('src', `cid:${id}`); 
+        img.removeAttribute('data-file-id');
+      });
+      finalContent = tempDiv.innerHTML;
+    }
+    submitData.append('content', finalContent);
+
     if (formData.category) submitData.append('category', formData.category);
     if (Object.keys(extraData).length > 0) submitData.append('extraData', JSON.stringify(extraData));
     
+    // 💡 에디터에 새로 삽입된 파일 추가
+    editorFiles.forEach(ef => {
+      const ext = ef.file.name.split('.').pop();
+      submitData.append('editorImages', ef.file, `${ef.id}.${ext}`);
+    });
+
     files.forEach((file) => { if (file) submitData.append('attachments', file); });
 
-    // 💡 로그인 시 발급받은 토큰 정보 가져오기
     const token = localStorage.getItem('token');
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/boards/posts/${postId}`, { 
         method: 'PUT', 
         headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}) // 💡 토큰 전송 (관리자/작성자 인증)
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: submitData 
       });
@@ -122,7 +162,6 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
                 </div>
               )}
               
-              {/* 💡 로그인하지 않은 상태일 때만 작성자와 비밀번호 입력창을 노출 */}
               {!isLoggedIn && (
                 <>
                   <div className="space-y-2">
@@ -179,9 +218,26 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
               <input type="text" name="title" value={formData.title} required onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" />
             </div>
 
+            {/* 💡 에디터 사용 여부에 따른 컴포넌트 렌더링 */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">내용 <span className="text-red-500">*</span></label>
-              <textarea name="content" value={formData.content} required rows={12} onChange={handleChange} className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 resize-none leading-relaxed"></textarea>
+              {boardConfig.useEditor ? (
+                <CustomEditor 
+                  value={formData.content} 
+                  onChange={(val) => setFormData(prev => ({ ...prev, content: val }))} 
+                  onImageAttach={handleEditorImageAttach}
+                  placeholder="자유롭게 내용을 수정해주세요. (이미지 드래그 후 크기 조절 가능)" 
+                />
+              ) : (
+                <textarea 
+                  name="content" 
+                  value={formData.content} 
+                  required 
+                  rows={12} 
+                  onChange={handleChange} 
+                  className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 resize-none leading-relaxed" 
+                />
+              )}
             </div>
 
             {boardConfig.fileUploadCount > 0 && (

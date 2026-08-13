@@ -45,7 +45,6 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         <article className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <header className="px-6 py-8 md:px-10 md:py-10 border-b border-slate-100 bg-slate-50/30">
             <h1 className="text-2xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight mb-6">
-              {/* 💡 카테고리 노출 영역 */}
               {post.category && <span className="text-blue-600 mr-3">[{post.category}]</span>}
               {post.title}
             </h1>
@@ -65,7 +64,6 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
           <div className="px-6 py-8 md:px-10 md:py-12">
             
-            {/* 💡 추가 데이터(Extra Fields) 노출 영역 */}
             {boardConfig?.useExtraFields && post.extraData && extraFields.length > 0 && (
               <div className="mb-10 bg-slate-50 border border-slate-200 rounded-xl p-6">
                 <h4 className="font-bold text-slate-700 mb-4 text-sm border-b border-slate-200 pb-2">상세 정보</h4>
@@ -96,9 +94,17 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
               </div>
             )}
 
-            <div className="text-slate-800 text-lg leading-relaxed whitespace-pre-wrap min-h-[250px]">
-              {post.content}
-            </div>
+            {/* 💡 에디터 사용 여부에 따라 HTML 렌더링 또는 일반 텍스트 출력 */}
+            {boardConfig?.useEditor ? (
+              <div 
+                className="text-slate-800 text-lg leading-relaxed min-h-[250px] editor-output"
+                dangerouslySetInnerHTML={{ __html: post.content }}
+              />
+            ) : (
+              <div className="text-slate-800 text-lg leading-relaxed whitespace-pre-wrap min-h-[250px]">
+                {post.content}
+              </div>
+            )}
           </div>
 
           {hasFiles && (

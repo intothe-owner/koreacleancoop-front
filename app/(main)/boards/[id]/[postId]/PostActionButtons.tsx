@@ -9,9 +9,30 @@ export default function PostActionButtons({ boardId, postId }: { boardId: string
   const handleDelete = async () => {
     if (!confirm('정말로 이 게시글을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.')) return;
 
+    // 💡 1. 로컬 스토리지에서 토큰 가져오기 (저장하신 키 이름에 맞게 확인해주세요)
+    const token = localStorage.getItem('token');
+
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/boards/posts/${postId}`, { method: 'DELETE' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/boards/posts/${postId}`, { 
+        method: 'DELETE',
+        // 💡 2. 헤더에 토큰 추가하기
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }) 
+        }
+      });
+      
+      // 💡 3. 토큰이 만료되었거나 없을 때 (401 에러) 처리
+      if (res.status === 401) {
+        alert('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login'; // 로그인 페이지로 이동
+        return;
+      }
+
       if (res.ok) {
+        alert('게시글이 삭제되었습니다.');
         router.push(`/boards/${boardId}`);
         router.refresh();
       } else {

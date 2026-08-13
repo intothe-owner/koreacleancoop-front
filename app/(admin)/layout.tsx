@@ -9,6 +9,7 @@ import {
   FileText, MessageSquare, LogOut, UserCircle, Loader2, Megaphone,
   BarChart2, Briefcase 
 } from "lucide-react";
+import TokenChecker from "@/components/TokenChecker";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -63,7 +64,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-800">
-      
+      {/* 💡 매 페이지 접근마다 토큰 만료를 감시하는 컴포넌트 추가 */}
+            <TokenChecker /> 
       <aside className="w-64 bg-slate-900 flex flex-col h-full flex-shrink-0 shadow-2xl z-20">
         <div className="h-16 flex items-center justify-center bg-slate-950 border-b border-slate-800 shadow-sm flex-shrink-0">
           <Link href="/admin/dashboard" className="text-xl font-black text-white tracking-widest hover:text-indigo-400 transition-colors">
