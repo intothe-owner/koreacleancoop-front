@@ -65,12 +65,12 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
 
   const isSolid = !hasSlider || isScrolled || isMobileMenuOpen;
 
-  // 상단바는 항상 검은색 고정
-  const topBarClasses = "hidden md:flex w-full bg-[#111] dark:bg-black border-b border-white/10";
+  // 💡 수정됨: relative와 z-20을 추가하여 하단 메뉴바보다 위로 오게 설정
+  const topBarClasses = "relative z-20 hidden md:flex w-full bg-[#111] dark:bg-black border-b border-white/10";
   const topBarTextClasses = "text-white/80 hover:text-white transition-colors drop-shadow-sm";
 
-  // 메인 메뉴바는 스크롤에 따라 투명 -> 흰색으로 변경
-  const mainBarClasses = `w-full transition-all duration-300 ${
+  // 💡 수정됨: relative와 z-10을 추가하여 상단바보다 아래에 위치하게 설정
+  const mainBarClasses = `relative z-10 w-full transition-all duration-300 ${
     isSolid
       ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200 dark:bg-slate-900/95 dark:border-slate-800"
       : "bg-transparent"
@@ -121,9 +121,9 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 <ChevronDown size={12} className="opacity-70 group-hover:rotate-180 transition-transform" />
               </div>
 
-              {/* 이름 마우스 호버 시 나오는 서브메뉴 */}
+              {/* 💡 수정됨: z-50을 추가하여 다른 요소들에 가려지지 않도록 보장 */}
               {isUserMenuOpen && (
-                <div className="absolute top-[35px] right-0 min-w-[140px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute top-[35px] right-0 z-50 min-w-[140px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
                   {userData?.level >= 9 && (
                     <a
                       href="/admin/dashboard"
@@ -201,7 +201,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 </a>
 
                 {menu.children && menu.children.length > 0 && openDropdownId === menu.id && (
-                  <div className="absolute top-[60px] left-1/2 -translate-x-1/2 min-w-[160px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
+                  <div className="absolute top-[60px] left-1/2 -translate-x-1/2 min-w-[160px] z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
                     {menu.children.map((child) => (
                       <a
                         key={child.id}
@@ -245,7 +245,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
 
       {/* 모바일 전체 메뉴 오픈 시 나타나는 레이어 */}
       {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-[104px] left-0 w-full bg-white dark:bg-slate-900 shadow-lg max-h-[calc(100vh-6.5rem)] overflow-y-auto flex flex-col">
+        <div className="md:hidden absolute top-[104px] left-0 w-full z-50 bg-white dark:bg-slate-900 shadow-lg max-h-[calc(100vh-6.5rem)] overflow-y-auto flex flex-col">
           <nav className="flex flex-col py-2">
             {menus.map((menu) => (
               <div key={menu.id} className="border-b border-slate-100 dark:border-slate-800 last:border-none">
