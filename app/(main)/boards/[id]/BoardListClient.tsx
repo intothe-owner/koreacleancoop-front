@@ -3,16 +3,19 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // 💡 URL 업데이트를 위해 추가
+import { useRouter } from 'next/navigation'; 
 
-export default function BoardListClient({ boardId, boardConfig, initialPosts, initialTotalPages, initialCategory = '' }: any) {
-  const router = useRouter(); // 💡 라우터 초기화
+// 💡 Props에 initialTotalCount 추가
+export default function BoardListClient({ boardId, boardConfig, initialPosts, initialTotalPages, initialTotalCount = 0, initialCategory = '' }: any) {
+  const router = useRouter();
   
   const [posts, setPosts] = useState(initialPosts);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
+  // 💡 전체 게시글 개수를 관리하는 상태 추가
+  const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory); // 💡 초기 카테고리 적용
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory); 
   const [loading, setLoading] = useState(false);
 
   const boardType = boardConfig.boardType;
@@ -34,6 +37,8 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
       if (json.success) {
         setPosts(isAppend ? [...posts, ...json.data] : json.data);
         setTotalPages(json.totalPages);
+        // 💡 백엔드에서 전달받은 전체 게시글 수 업데이트
+        setTotalCount(json.totalCount);
       }
     } catch (error) { console.error('데이터 페칭 오류:', error); }
     setLoading(false);
@@ -45,12 +50,10 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
     fetchPosts(1, search, selectedCategory, false);
   };
 
-  // 💡 카테고리 클릭 시 데이터 로딩 및 URL 주소 변경
   const handleCategoryClick = (cat: string) => {
     setSelectedCategory(cat);
     setPage(1);
     
-    // 💡 화면 새로고침 없이 주소창 URL만 업데이트 (?category=카테고리명)
     const newUrl = cat ? `/boards/${boardId}?category=${encodeURIComponent(cat)}` : `/boards/${boardId}`;
     router.push(newUrl, { scroll: false });
     
@@ -108,7 +111,7 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
           </div>
         </div>
 
-        {/* 💡 카테고리 탭 UI */}
+        {/* 카테고리 탭 UI */}
         {categories.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-8">
             <button 
@@ -129,7 +132,7 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
           </div>
         )}
 
-        {/* 게시판 리스트 (기존 코드 유지하되 카테고리 출력 추가) */}
+        {/* 💡 일반 게시판 (GENERAL) 리스트 */}
         {boardType === 'GENERAL' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="hidden md:block overflow-x-auto">
@@ -144,17 +147,21 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {posts.map((post: any) => (
+                  {/* 💡 map 함수의 두 번째 인자인 index를 활용하여 가상 번호 계산 */}
+                  {posts.map((post: any, index: number) => (
                     <tr key={post.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="py-4 px-6 text-center text-sm text-slate-500">{post.id}</td>
+                      <td className="py-4 px-6 text-center text-sm text-slate-500 font-medium">
+                        {/* 💡 전체 개수에서 인덱스를 빼는 방식으로 내림차순 번호 적용 */}
+                        {totalCount - index}
+                      </td>
                       <td className="py-4 px-6">
                         <Link href={`/boards/${boardId}/${post.id}`} className="flex items-center text-slate-800 group-hover:text-blue-600 font-medium transition-colors">
-                          {post.isNotice && <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600 mr-2">공지</span>}
-                          {post.category && <span className="text-slate-400 font-bold mr-2">[{post.category}]</span>} {/* 💡 카테고리 표시 */}
-                          {post.title}
+                          {post.isNotice && <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600 mr-2 shrink-0">공지</span>}
+                          {post.category && <span className="text-slate-400 font-bold mr-2 shrink-0">[{post.category}]</span>}
+                          <span className="truncate">{post.title}</span>
                         </Link>
                       </td>
-                      <td className="py-4 px-6 text-center text-sm text-slate-600">{post.writerName}</td>
+                      <td className="py-4 px-6 text-center text-sm text-slate-600 truncate">{post.writerName}</td>
                       <td className="py-4 px-6 text-center text-sm text-slate-500">{new Date(post.createdAt).toLocaleDateString()}</td>
                       <td className="py-4 px-6 text-center text-sm text-slate-500">{post.hitCount}</td>
                     </tr>
@@ -169,14 +176,18 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
               {posts.map((post: any, index: number) => (
                 <li key={post.id} ref={index === posts.length - 1 ? lastPostElementRef : null} className="p-4 hover:bg-slate-50 transition-colors">
                   <Link href={`/boards/${boardId}/${post.id}`} className="block">
-                    <div className="text-base font-semibold text-slate-800 mb-2 truncate">
-                      {post.isNotice && <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600 mr-2">공지</span>}
-                      {post.category && <span className="text-slate-400 font-bold mr-2">[{post.category}]</span>}
-                      {post.title}
+                    <div className="flex items-center gap-2 mb-2">
+                      {/* 💡 모바일 환경에서도 리스트 앞쪽에 가상 번호 표시 */}
+                      <span className="text-xs font-bold text-slate-400 shrink-0">{totalCount - index}</span>
+                      <div className="text-base font-semibold text-slate-800 truncate">
+                        {post.isNotice && <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600 mr-2">공지</span>}
+                        {post.category && <span className="text-slate-400 font-bold mr-2">[{post.category}]</span>}
+                        {post.title}
+                      </div>
                     </div>
                     <div className="flex justify-between items-center text-xs text-slate-500">
                       <span className="font-medium text-slate-600">{post.writerName}</span>
-                      <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                      <span>{new Date(post.createdAt).toLocaleDateString()} | 조회 {post.hitCount}</span>
                     </div>
                   </Link>
                 </li>
@@ -185,7 +196,7 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
           </div>
         )}
 
-        {/* 갤러리 및 FAQ 유지 (카테고리 텍스트만 추가) */}
+        {/* 갤러리 및 FAQ 유지 */}
         {boardType === 'GALLERY' && (
           <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {posts.map((post: any, index: number) => (
@@ -225,7 +236,7 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
                 <div className="p-6 pt-2 bg-slate-50/50 border-t border-slate-100 text-slate-600 leading-relaxed">
                   <div className="flex items-start gap-4">
                     <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-600 font-bold shrink-0 mt-1">A</span>
-                    <div className="whitespace-pre-wrap pt-1">{post.content}</div>
+                    <div className="whitespace-pre-wrap pt-1" dangerouslySetInnerHTML={{ __html: post.content }} />
                   </div>
                 </div>
               </details>
@@ -233,6 +244,7 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
           </div>
         )}
 
+        {/* 💡 무한 스크롤 방식을 고려해 페이지네이션은 유지 (필요에 따라 제거 가능) */}
         <div className="hidden md:flex justify-center items-center gap-2 mt-12">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button key={p} onClick={() => handlePageClick(p)} className={`w-10 h-10 rounded-xl font-medium transition-all ${page === p ? 'bg-blue-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{p}</button>
