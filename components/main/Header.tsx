@@ -136,7 +136,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                     href="/mypage"
                     className="block px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors whitespace-nowrap"
                   >
-                    정보수정
+                    마이페이지
                   </a>
                   <button
                     onClick={handleLogout}
@@ -325,7 +325,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="w-full py-3 text-center text-sm font-extrabold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition"
               >
-                정보수정
+                마이페이지
               </a>
               <button
                 onClick={handleLogout}
