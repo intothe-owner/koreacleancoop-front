@@ -47,7 +47,7 @@ export default async function BoardListPage({
   const hasSlider = sliderData.length > 0 && sliderData.some((slide: any) => slide.mediaUrl && slide.mediaUrl.trim() !== "");
                     
   const meta = pageData?.pageMeta || {};
-
+  
   return (
     <div className="w-full flex flex-col pt-24">
       {hasSlider && <MainSlider slides={sliderData} />}
@@ -68,6 +68,7 @@ export default async function BoardListPage({
           initialPosts={postsJson.data} 
           initialTotalPages={postsJson.totalPages}
           initialCategory={categoryQuery} // 💡 클라이언트 컴포넌트에 초기 카테고리 값 전달
+          initialTotalCount={postsJson.totalCount || 0}
         />
       </div>
     </div>
