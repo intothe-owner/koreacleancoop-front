@@ -175,7 +175,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           <Link href={`/boards/${boardId}`} className="px-6 py-2.5 font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-sm transition-colors">
             목록으로
           </Link>
-          <PostActionButtons boardId={boardId} postId={postId} />
+          <PostActionButtons boardId={boardId} postId={postId} boardConfig={boardConfig}/>
         </div>
       </div>
     </div>
