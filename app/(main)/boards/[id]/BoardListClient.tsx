@@ -1,4 +1,3 @@
-// src/app/(main)/boards/[id]/BoardListClient.tsx
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -12,7 +11,10 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
   const [page, setPage] = useState(1);
   const [startPage, setStartPage] = useState(1); // 💡 페이지 이동 시 넘버링 기준점이 되는 상태 추가
   const [totalPages, setTotalPages] = useState(initialTotalPages);
-  const [totalCount, setTotalCount] = useState(initialTotalCount);
+  // 서버에서 initialTotalCount가 누락되어도 첫 화면 번호가 0, -1, -2가 되지 않도록 처리
+  const [totalCount, setTotalCount] = useState(
+    initialTotalCount > 0 ? initialTotalCount : initialPosts.length
+  );
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(initialCategory); 
   const [loading, setLoading] = useState(false);
