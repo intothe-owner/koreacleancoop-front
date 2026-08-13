@@ -27,10 +27,16 @@ export default function MemberManager() {
   };
   const [formData, setFormData] = useState(initialForm);
 
-  const getAuthHeaders = () => ({
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
-  });
+  const getAuthHeaders = () => {
+    // 💡 토큰 앞뒤에 묻어있는 쌍따옴표/홑따옴표 제거
+    const rawToken = localStorage.getItem("token") || "";
+    const cleanToken = rawToken.replace(/^['"]|['"]$/g, ''); 
+
+    return {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${cleanToken}`
+    };
+  };
 
   // 1. 회원 목록 조회 (💡 검색 파라미터 추가)
   const fetchMembers = async (currentPage = 1, currentFilter = filterLevel) => {
