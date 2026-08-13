@@ -23,8 +23,8 @@ export default function TokenChecker() {
         // 3. 만료 시간 확인 (payload.exp는 초 단위이므로 밀리초를 초 단위로 변환해서 비교)
         const currentTime = Math.floor(Date.now() / 1000);
 
-        console.log(currentTime);
-        console.log(payload.exp);
+        console.log(`currentTime:${currentTime}`);
+        console.log(`payload.exp:${payload.exp}`);
         if (payload.exp && payload.exp < currentTime) {
           // 토큰이 만료된 경우
           alert("로그인 세션이 만료되었습니다. 다시 로그인해 주세요.");
