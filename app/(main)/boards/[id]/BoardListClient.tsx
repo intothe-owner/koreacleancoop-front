@@ -3,16 +3,15 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; 
+import { useRouter } from 'next/navigation';
 
-// 💡 Props에 initialTotalCount 추가
 export default function BoardListClient({ boardId, boardConfig, initialPosts, initialTotalPages, initialTotalCount = 0, initialCategory = '' }: any) {
   const router = useRouter();
   
   const [posts, setPosts] = useState(initialPosts);
   const [page, setPage] = useState(1);
+  const [startPage, setStartPage] = useState(1); // 💡 페이지 이동 시 넘버링 기준점이 되는 상태 추가
   const [totalPages, setTotalPages] = useState(initialTotalPages);
-  // 💡 전체 게시글 개수를 관리하는 상태 추가
   const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(initialCategory); 
@@ -35,9 +34,15 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/boards/${boardId}/posts?page=${currentPage}&limit=${listCount}&search=${searchQuery}&category=${encodeURIComponent(categoryQuery)}`);
       const json = await res.json();
       if (json.success) {
-        setPosts(isAppend ? [...posts, ...json.data] : json.data);
+        if (isAppend) {
+          // 무한 스크롤로 이어붙일 때는 startPage를 변경하지 않음
+          setPosts([...posts, ...json.data]);
+        } else {
+          // 페이지 번호를 누르거나 검색/카테고리를 클릭해 새 목록을 부를 때 기준점 업데이트
+          setStartPage(currentPage);
+          setPosts(json.data);
+        }
         setTotalPages(json.totalPages);
-        // 💡 백엔드에서 전달받은 전체 게시글 수 업데이트
         setTotalCount(json.totalCount);
       }
     } catch (error) { console.error('데이터 페칭 오류:', error); }
@@ -83,7 +88,6 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
     <div className="w-full flex flex-col pt-12 pb-24">
       <div className="max-w-6xl mx-auto px-4 w-full">
         
-        {/* 헤더 및 검색바 */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-6 border-b border-slate-200 pb-6">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{boardConfig.boardName}</h1>
@@ -111,7 +115,6 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
           </div>
         </div>
 
-        {/* 카테고리 탭 UI */}
         {categories.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-8">
             <button 
@@ -132,7 +135,6 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
           </div>
         )}
 
-        {/* 💡 일반 게시판 (GENERAL) 리스트 */}
         {boardType === 'GENERAL' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="hidden md:block overflow-x-auto">
@@ -147,12 +149,11 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {/* 💡 map 함수의 두 번째 인자인 index를 활용하여 가상 번호 계산 */}
                   {posts.map((post: any, index: number) => (
                     <tr key={post.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="py-4 px-6 text-center text-sm text-slate-500 font-medium">
-                        {/* 💡 전체 개수에서 인덱스를 빼는 방식으로 내림차순 번호 적용 */}
-                        {totalCount - index}
+                        {/* 💡 페이지네이션 오프셋을 반영한 정확한 번호 계산식 */}
+                        {totalCount - ((startPage - 1) * listCount) - index}
                       </td>
                       <td className="py-4 px-6">
                         <Link href={`/boards/${boardId}/${post.id}`} className="flex items-center text-slate-800 group-hover:text-blue-600 font-medium transition-colors">
@@ -171,14 +172,15 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
               </table>
             </div>
             
-            {/* 모바일 리스트 */}
             <ul className="block md:hidden divide-y divide-slate-100">
               {posts.map((post: any, index: number) => (
                 <li key={post.id} ref={index === posts.length - 1 ? lastPostElementRef : null} className="p-4 hover:bg-slate-50 transition-colors">
                   <Link href={`/boards/${boardId}/${post.id}`} className="block">
                     <div className="flex items-center gap-2 mb-2">
-                      {/* 💡 모바일 환경에서도 리스트 앞쪽에 가상 번호 표시 */}
-                      <span className="text-xs font-bold text-slate-400 shrink-0">{totalCount - index}</span>
+                      <span className="text-xs font-bold text-slate-400 shrink-0">
+                        {/* 💡 모바일 뷰 넘버링도 동일하게 수정 */}
+                        {totalCount - ((startPage - 1) * listCount) - index}
+                      </span>
                       <div className="text-base font-semibold text-slate-800 truncate">
                         {post.isNotice && <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600 mr-2">공지</span>}
                         {post.category && <span className="text-slate-400 font-bold mr-2">[{post.category}]</span>}
@@ -196,7 +198,6 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
           </div>
         )}
 
-        {/* 갤러리 및 FAQ 유지 */}
         {boardType === 'GALLERY' && (
           <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {posts.map((post: any, index: number) => (
@@ -244,7 +245,6 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
           </div>
         )}
 
-        {/* 💡 무한 스크롤 방식을 고려해 페이지네이션은 유지 (필요에 따라 제거 가능) */}
         <div className="hidden md:flex justify-center items-center gap-2 mt-12">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button key={p} onClick={() => handlePageClick(p)} className={`w-10 h-10 rounded-xl font-medium transition-all ${page === p ? 'bg-blue-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{p}</button>
