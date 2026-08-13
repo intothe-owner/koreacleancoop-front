@@ -1,5 +1,8 @@
+// src/app/(main)/[id]/page.tsx
+
 import BlockRenderer from "@/components/main/BlockRenderer";
 import MainSlider from "@/components/main/MainSlider";
+import TabMenu from "@/components/main/TabMenu"; // 💡 탭 메뉴 컴포넌트 추가
 
 interface SubPageProps {
   params: Promise<{
@@ -12,14 +15,22 @@ export default async function SubPage({ params }: SubPageProps) {
   const targetId = id;
 
   let pageData = null;
+  let allMenus = []; // 전체 메뉴 데이터를 담을 변수
 
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/${targetId}`, { cache: "no-store" });
-    const json = await res.json();
-    if (json.success) pageData = json.data;
+    const [pageRes, menuRes] = await Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/${targetId}`, { cache: "no-store" }),
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/menus`, { cache: "no-store" })
+    ]);
+
+    const pageJson = await pageRes.json();
+    if (pageJson.success) pageData = pageJson.data;
+
+    const menuJson = await menuRes.json();
+    if (menuJson.success) allMenus = menuJson.data;
 
   } catch (error) {
-    console.error("서브페이지 데이터 로딩 실패:", error);
+    console.error("데이터 로딩 실패:", error);
   }
 
   if (!pageData) {
@@ -32,7 +43,6 @@ export default async function SubPage({ params }: SubPageProps) {
     );
   }
   
-  // 💡 핵심 수정 부분: 배열 길이뿐만 아니라 실제 mediaUrl 값이 존재하는 슬라이드가 최소 1개 이상인지 검증합니다.
   const hasSlider = pageData.sliderData && 
                     pageData.sliderData.length > 0 && 
                     pageData.sliderData.some((slide: any) => slide.mediaUrl && slide.mediaUrl.trim() !== "");
@@ -61,9 +71,14 @@ export default async function SubPage({ params }: SubPageProps) {
         </div>
       )}
 
+      {/* 💡 4. 분리된 탭 메뉴 컴포넌트 렌더링 */}
+      <TabMenu allMenus={allMenus} currentMenuId={pageData.menuId} />
+
       {/* 본문 렌더링 */}
       {pageData.contentBlocks && pageData.contentBlocks.length > 0 && (
-        <BlockRenderer blocks={pageData.contentBlocks} />
+        <div className="mt-8">
+          <BlockRenderer blocks={pageData.contentBlocks} />
+        </div>
       )}
     </div>
   );

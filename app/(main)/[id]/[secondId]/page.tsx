@@ -2,8 +2,8 @@
 
 import BlockRenderer from "@/components/main/BlockRenderer";
 import MainSlider from "@/components/main/MainSlider";
+import TabMenu from "@/components/main/TabMenu"; // 💡 새로 만든 컴포넌트 임포트
 
-// 💡 1. params에 secondId를 추가합니다.
 interface NestedSubPageProps {
   params: Promise<{
     id: string;
@@ -12,20 +12,24 @@ interface NestedSubPageProps {
 }
 
 export default async function NestedSubPage({ params }: NestedSubPageProps) {
-  // 💡 2. id와 secondId를 모두 꺼냅니다.
   const { id, secondId } = await params;
-  
-  // 💡 3. API에서 조회할 대상을 secondId로 설정합니다.
-  // (만약 백엔드에서 id와 secondId의 조합으로 검색해야 한다면 `${id}/${secondId}` 형태로 수정하세요)
   const targetId = `${id}/${secondId}`;
 
   let pageData = null;
+  let allMenus: any[] = [];
 
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/${targetId}`, { cache: "no-store" });
-    const json = await res.json();
-    if (json.success) pageData = json.data;
+    // API 병렬 호출 유지
+    const [pageRes, menuRes] = await Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/${targetId}`, { cache: "no-store" }),
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/menus`, { cache: "no-store" })
+    ]);
 
+    const pageJson = await pageRes.json();
+    if (pageJson.success) pageData = pageJson.data;
+
+    const menuJson = await menuRes.json();
+    if (menuJson.success) allMenus = menuJson.data;
   } catch (error) {
     console.error("2뎁스 서브페이지 데이터 로딩 실패:", error);
   }
@@ -68,9 +72,14 @@ export default async function NestedSubPage({ params }: NestedSubPageProps) {
         </div>
       )}
 
-      {/* 본문 렌더링 */}
+      {/* 💡 4. 분리한 탭 메뉴 컴포넌트 렌더링 */}
+      <TabMenu allMenus={allMenus} currentMenuId={pageData.menuId} />
+
+      {/* 5. 본문 렌더링 */}
       {pageData.contentBlocks && pageData.contentBlocks.length > 0 && (
-        <BlockRenderer blocks={pageData.contentBlocks} />
+        <div className="mt-8">
+          <BlockRenderer blocks={pageData.contentBlocks} />
+        </div>
       )}
     </div>
   );
