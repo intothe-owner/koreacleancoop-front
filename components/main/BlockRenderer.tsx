@@ -3,7 +3,12 @@
 import React from "react";
 import { motion } from "framer-motion";
 
-// --- 기존 인터페이스 타입들 생략 (이전과 동일) ---
+interface AnimationConfig {
+  type: "none" | "fadeIn" | "slideUp" | "slideDown" | "slideLeft" | "slideRight" | "zoomIn";
+  duration: number;
+  delay: number;
+}
+
 interface ElementNode {
   id: string;
   type: string;
@@ -12,18 +17,13 @@ interface ElementNode {
   buttonStyles?: any;
   tableData?: any;
   cardData?: any;
+  animation?: AnimationConfig; // 💡 개별 엘리먼트 애니메이션 설정 추가
 }
 
 interface ColumnNode {
   id: string;
   width: string;
   elements: ElementNode[];
-}
-
-interface AnimationConfig {
-  type: "none" | "fadeIn" | "slideUp" | "slideDown" | "slideLeft" | "slideRight" | "zoomIn";
-  duration: number;
-  delay: number;
 }
 
 interface ContainerNode {
@@ -33,7 +33,6 @@ interface ContainerNode {
 }
 
 const AnimatedContainer = ({ container, children }: { container: ContainerNode, children: React.ReactNode }) => {
-  // ... (이전 AnimatedContainer 코드와 동일) ...
   const { animation } = container;
 
   if (!animation || animation.type === "none") {
@@ -66,6 +65,47 @@ const AnimatedContainer = ({ container, children }: { container: ContainerNode, 
   );
 };
 
+// 💡 [핵심 추가] 개별 엘리먼트에 애니메이션을 적용해주는 래퍼 컴포넌트
+const AnimatedElement = ({ el, children }: { el: ElementNode, children: React.ReactNode }) => {
+  const { animation, styles } = el;
+  const baseClassName = "w-full flex";
+  const baseStyle = { justifyContent: styles?.layerAlign || "flex-start" };
+
+  if (!animation || animation.type === "none") {
+    return (
+      <div className={baseClassName} style={baseStyle}>
+        {children}
+      </div>
+    );
+  }
+
+  let initialStyle: any = { opacity: 0 };
+  let whileInViewStyle: any = { opacity: 1 };
+
+  switch (animation.type) {
+    case "slideUp": initialStyle.y = 50; whileInViewStyle.y = 0; break;
+    case "slideDown": initialStyle.y = -50; whileInViewStyle.y = 0; break;
+    case "slideLeft": initialStyle.x = 50; whileInViewStyle.x = 0; break;
+    case "slideRight": initialStyle.x = -50; whileInViewStyle.x = 0; break;
+    case "zoomIn": initialStyle.scale = 0.8; whileInViewStyle.scale = 1; break;
+    case "fadeIn":
+    default: break;
+  }
+
+  return (
+    <motion.div
+      initial={initialStyle}
+      whileInView={whileInViewStyle}
+      viewport={{ once: true, amount: 0.1 }}
+      transition={{ duration: animation.duration || 0.5, delay: animation.delay || 0, ease: "easeOut" }}
+      className={baseClassName}
+      style={baseStyle}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
 export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
   const getWidthClass = (width: string) => {
     switch (width) {
@@ -89,15 +129,11 @@ export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
     return color;
   };
 
-  // 💡 [핵심 추가] AI가 생성한 HTML 내부의 강제 검은색/어두운색 인라인 스타일을 정규식으로 제거
   const cleanHtmlForTheme = (html: string) => {
     if (!html) return "";
     return html
-      // color: #000, #000000, #333, rgb(0,0,0) 등을 지워서 Tailwind가 색상을 덮어쓰도록 유도
       .replace(/color:\s*(#000000|#000|#1e293b|#333333|#333|#111|#111111|rgb\(0,\s*0,\s*0\));?/gi, "")
-      // background-color: #fff, #ffffff 등을 지워서 다크모드 배경을 덮어쓰도록 유도
       .replace(/background-color:\s*(#ffffff|#fff|transparent|rgb\(255,\s*255,\s*255\));?/gi, "")
-      // 내용이 비어버린 style="" 속성 찌꺼기 깔끔하게 정리
       .replace(/style="\s*"/gi, "");
   };
 
@@ -108,8 +144,9 @@ export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
           {container.columns.map((column) => (
             <div key={column.id} className={`${getWidthClass(column.width)} px-4 md:px-8 flex flex-col gap-6`}>
               {column.elements.map((el) => (
-                <div key={el.id} className="w-full flex" style={{ justifyContent: el.styles?.layerAlign || "flex-start" }}>
-
+                // 💡 [변경] 기존 div 대신 AnimatedElement 래퍼를 사용하여 모든 엘리먼트에 애니메이션 적용
+                <AnimatedElement key={el.id} el={el}>
+                  
                   {/* 1. 텍스트 엘리먼트 */}
                   {el.type === "TEXT" && (
                     <div
@@ -124,7 +161,6 @@ export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
                         fontStyle: el.styles?.fontStyle || "normal",
                         textDecoration: el.styles?.textDecoration || "none",
                       }}
-                      // 💡 cleanHtmlForTheme 적용
                       dangerouslySetInnerHTML={{ __html: cleanHtmlForTheme(el.content) }}
                       className="whitespace-pre-wrap break-words prose prose-slate dark:prose-invert max-w-none w-full"
                     />
@@ -192,7 +228,6 @@ export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
                                       borderStyle: 'solid'
                                     }}
                                   >
-                                    {/* 💡 cleanHtmlForTheme 적용 */}
                                     <div dangerouslySetInnerHTML={{ __html: cleanHtmlForTheme(cell.content) }} className="w-full min-h-[20px]" />
                                   </td>
                                 );
@@ -204,13 +239,10 @@ export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
                     </div>
                   )}
 
-                  {/* 8. 카드 엘리먼트 */}
+                  {/* 8. 카드 엘리먼트 
+                      💡 [변경] 이미 AnimatedElement 래퍼가 애니메이션을 처리하므로, 충돌 방지를 위해 motion.div를 일반 div로 변경 */}
                   {el.type === "CARD" && el.cardData && (
-                    <motion.div
-                      initial={el.cardData.animation !== 'none' ? { opacity: 0, y: el.cardData.animation === 'slideUp' ? 30 : 0, scale: el.cardData.animation === 'zoomIn' ? 0.9 : 1 } : false}
-                      whileInView={el.cardData.animation !== 'none' ? { opacity: 1, y: 0, scale: 1 } : undefined}
-                      viewport={{ once: true, amount: 0.2 }}
-                      transition={{ duration: 0.5, ease: "easeOut" }}
+                    <div
                       style={{
                         borderStyle: 'solid',
                         borderWidth: `${el.cardData.borderWidth}px`,
@@ -249,13 +281,12 @@ export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
                           fontStyle: el.styles?.fontStyle || 'normal',
                           textDecoration: el.styles?.textDecoration || 'none',
                         }}
-                        
                         dangerouslySetInnerHTML={{ __html: cleanHtmlForTheme(el.content) }} 
                       />
-                    </motion.div>
+                    </div>
                   )}
 
-                </div>
+                </AnimatedElement>
               ))}
             </div>
           ))}
