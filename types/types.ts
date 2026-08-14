@@ -67,6 +67,7 @@ export interface ElementNode {
     cardData?: CardData;
     tableData?: TableData;
     file?: File;
+    animation?: AnimationConfig;
 }
 
 export interface ColumnNode {

@@ -14,7 +14,8 @@ interface ContainerBoardProps {
     setActiveElementId: (id: string | null) => void;
     setLayoutModalOpen: (isOpen: boolean) => void;
     setElementModalOpen: (modal: { containerId: string; columnId: string } | null) => void;
-    openAnimModal: (container: ContainerNode) => void;
+    // 💡 인터페이스 수정: type과 추가 ID들을 받을 수 있도록 변경
+    openAnimModal: (item: any, type?: 'container' | 'element', containerId?: string, columnId?: string) => void;
     deleteElement: (containerId: string, columnId: string, elementId: string) => void;
     handleFileUpload: (containerId: string, columnId: string, elementId: string, file: File) => void;
     updateElementStyle: (containerId: string, columnId: string, elementId: string, key: any, value: any) => void;
@@ -46,7 +47,6 @@ export default function ContainerBoard({
     setAiModalOpen
 }: ContainerBoardProps) {
 
-    // 💡 HTML 소스 편집 모드를 관리하는 상태
     const [htmlModeElements, setHtmlModeElements] = useState<Record<string, boolean>>({});
 
     const toggleHtmlMode = (e: React.MouseEvent, id: string) => {
@@ -82,7 +82,7 @@ export default function ContainerBoard({
                                     <Sparkles size={14} />
                                 </button>
                             )}
-                            <button onClick={() => openAnimModal(container)} className="p-1.5 hover:bg-white/20 rounded transition" title="애니메이션 설정">
+                            <button onClick={() => openAnimModal(container, 'container')} className="p-1.5 hover:bg-white/20 rounded transition" title="애니메이션 설정">
                                 <Wand2 size={14} />
                             </button>
                             <button onClick={() => setContainers(containers.filter((c) => c.id !== container.id))} className="p-1.5 hover:bg-red-500 rounded transition" title="삭제">
@@ -101,6 +101,13 @@ export default function ContainerBoard({
                                     return (
                                         <div key={el.id} className={`element-box relative flex w-full ${el.type === 'TEXT' ? 'py-1 px-4' : 'p-4'}`} style={{ justifyContent: el.styles?.layerAlign || 'flex-start' }}>
 
+                                            {/* 💡 개별 엘리먼트에 애니메이션이 적용되어 있으면 뱃지로 표시 */}
+                                            {el.animation && el.animation.type !== 'none' && (
+                                                <div className="absolute -top-2 -left-2 bg-indigo-500 text-white text-[9px] px-1.5 py-0.5 rounded-full z-10 shadow-sm pointer-events-none">
+                                                    {el.animation.type}
+                                                </div>
+                                            )}
+
                                             {/* 1. TEXT Element */}
                                             {el.type === "TEXT" && el.styles && (
                                                 <div
@@ -118,13 +125,22 @@ export default function ContainerBoard({
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-2 z-50 whitespace-nowrap element-toolbar">
 
-                                                            {/* 💡 HTML 소스 편집 버튼 */}
                                                             <button
                                                                 onMouseDown={(e) => toggleHtmlMode(e, el.id)}
                                                                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors ${htmlModeElements[el.id] ? 'bg-slate-800 text-green-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                                                 title="HTML 소스 직접 편집"
                                                             >
                                                                 <Code size={14} /> HTML
+                                                            </button>
+                                                            <div className="w-px h-4 bg-slate-300" />
+
+                                                            {/* 💡 엘리먼트 애니메이션 버튼 */}
+                                                            <button
+                                                                onMouseDown={(e) => { e.preventDefault(); openAnimModal(el, 'element', container.id, column.id); }}
+                                                                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600"
+                                                                title="애니메이션 효과"
+                                                            >
+                                                                <Wand2 size={14} /> 애니
                                                             </button>
                                                             <div className="w-px h-4 bg-slate-300" />
 
@@ -208,7 +224,6 @@ export default function ContainerBoard({
                                                         </>
                                                     )}
 
-                                                    {/* 💡 HTML 모드일 때 Textarea 노출 */}
                                                     {htmlModeElements[el.id] ? (
                                                         <textarea
                                                             value={el.content}
@@ -251,10 +266,9 @@ export default function ContainerBoard({
 
                                             {/* 2. IMAGE Element */}
                                             {el.type === "IMAGE" && (
-                                                <div className="w-full relative group hover:outline outline-2 outline-indigo-200 rounded">
+                                                <div className="w-full relative group hover:outline outline-2 outline-indigo-200 rounded" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {el.content ? (
                                                         <div className="relative border rounded overflow-hidden">
-                                                            {/* 💡 수정 1: 이미지가 엑박(Broken)이어도 버튼을 클릭할 수 있도록 min-h-[100px]와 기본 배경색(bg-slate-100) 추가 */}
                                                             <img src={el.content} alt="업로드/생성 이미지" className="w-full h-auto object-cover max-h-64 min-h-[100px] bg-slate-100" />
 
                                                             {el.content.includes("pollinations.ai") && (
@@ -273,7 +287,6 @@ export default function ContainerBoard({
                                                                 </div>
                                                             )}
 
-                                                            {/* 💡 수정 2: 우측 상단에 [변경] 버튼을 추가하고 [삭제] 버튼과 나란히 배치 */}
                                                             <div className="absolute top-2 right-2 flex items-center gap-2 z-20">
                                                                 <label className="flex items-center gap-1 p-1.5 bg-indigo-600 text-white rounded shadow hover:bg-indigo-700 cursor-pointer transition-colors" title="이미지 변경">
                                                                     <ImagePlus size={14} />
@@ -282,6 +295,10 @@ export default function ContainerBoard({
                                                                         if (e.target.files?.[0]) handleFileUpload(container.id, column.id, el.id, e.target.files[0]);
                                                                     }} />
                                                                 </label>
+                                                                {/* 💡 엘리먼트 애니메이션 버튼 */}
+                                                                <button onClick={(e) => { e.stopPropagation(); openAnimModal(el, 'element', container.id, column.id); }} className="p-1.5 bg-indigo-600 text-white rounded shadow hover:bg-indigo-700 transition-colors" title="애니메이션 설정">
+                                                                    <Wand2 size={14} />
+                                                                </button>
                                                                 <button onClick={() => deleteElement(container.id, column.id, el.id)} className="p-1.5 bg-red-600 text-white rounded shadow hover:bg-red-700 transition-colors" title="삭제">
                                                                     <Trash2 size={14} />
                                                                 </button>
@@ -311,13 +328,19 @@ export default function ContainerBoard({
 
                                             {/* 3. VIDEO Element */}
                                             {el.type === "VIDEO" && (
-                                                <div className="w-full relative">
+                                                <div className="w-full relative" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {el.content ? (
                                                         <div className="relative border rounded overflow-hidden bg-black">
                                                             <video src={el.content} controls className="w-full max-h-64 object-contain" />
-                                                            <button onClick={() => deleteElement(container.id, column.id, el.id)} className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded shadow hover:bg-red-700">
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            <div className="absolute top-2 right-2 flex items-center gap-2 z-20">
+                                                                {/* 💡 엘리먼트 애니메이션 버튼 */}
+                                                                <button onClick={(e) => { e.stopPropagation(); openAnimModal(el, 'element', container.id, column.id); }} className="p-1.5 bg-indigo-600 text-white rounded shadow hover:bg-indigo-700 transition-colors" title="애니메이션 설정">
+                                                                    <Wand2 size={14} />
+                                                                </button>
+                                                                <button onClick={() => deleteElement(container.id, column.id, el.id)} className="p-1.5 bg-red-600 text-white rounded shadow hover:bg-red-700 transition-colors">
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     ) : (
                                                         <label
@@ -338,13 +361,19 @@ export default function ContainerBoard({
 
                                             {/* 4. AUDIO Element */}
                                             {el.type === "AUDIO" && (
-                                                <div className="w-full relative">
+                                                <div className="w-full relative" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {el.content ? (
-                                                        <div className="relative border rounded p-4 bg-white flex flex-col gap-2 w-full">
+                                                        <div className="relative border rounded p-4 bg-white flex flex-col gap-2 w-full pt-10">
                                                             <audio src={el.content} controls className="w-full" />
-                                                            <button onClick={() => deleteElement(container.id, column.id, el.id)} className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded shadow hover:bg-red-700">
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            <div className="absolute top-2 right-2 flex items-center gap-2 z-20">
+                                                                {/* 💡 엘리먼트 애니메이션 버튼 */}
+                                                                <button onClick={(e) => { e.stopPropagation(); openAnimModal(el, 'element', container.id, column.id); }} className="p-1.5 bg-indigo-600 text-white rounded shadow hover:bg-indigo-700 transition-colors" title="애니메이션 설정">
+                                                                    <Wand2 size={14} />
+                                                                </button>
+                                                                <button onClick={() => deleteElement(container.id, column.id, el.id)} className="p-1.5 bg-red-600 text-white rounded shadow hover:bg-red-700 transition-colors">
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     ) : (
                                                         <label
@@ -363,14 +392,20 @@ export default function ContainerBoard({
                                                 </div>
                                             )}
 
-                                            {/* 5. BUTTON Element (💡 String() 타입 강제변환 적용 완료) */}
+                                            {/* 5. BUTTON Element */}
                                             {el.type === "BUTTON" && el.buttonStyles && (
                                                 <div className="p-4 flex flex-col justify-center items-center w-full relative" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-3 z-50 whitespace-nowrap">
+                                                            {/* 💡 엘리먼트 애니메이션 버튼 */}
+                                                            <button onMouseDown={(e) => { e.preventDefault(); openAnimModal(el, 'element', container.id, column.id); }} className="flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-indigo-600" title="애니메이션 효과">
+                                                                <Wand2 size={14} /> 애니
+                                                            </button>
+                                                            <div className="w-px h-4 bg-slate-300" />
+
                                                             <input type="text" value={el.buttonStyles.text} onChange={(e) => updateElementProps(container.id, column.id, el.id, 'buttonStyles', 'text', e.target.value)} className="w-20 text-xs border border-slate-200 rounded px-1 py-1" title="버튼 텍스트" />
                                                             <input type="color" value={el.buttonStyles.backgroundColor} onChange={(e) => updateElementProps(container.id, column.id, el.id, 'buttonStyles', 'backgroundColor', e.target.value)} className="w-5 h-5 cursor-pointer" title="버튼 배경색" />
-
+                                                            
                                                             <div className="w-px h-4 bg-slate-300" />
 
                                                             <div className="flex items-center gap-1" title="버튼 클릭 시 이동할 URL">
@@ -412,7 +447,14 @@ export default function ContainerBoard({
 
                                             {/* 6. SEPARATOR Element */}
                                             {el.type === "SEPARATOR" && (
-                                                <div className="w-full h-4 border-b-2 border-dashed border-slate-300"></div>
+                                                <div className="w-full h-4 border-b-2 border-dashed border-slate-300 relative group" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
+                                                    {isActive && (
+                                                        <div className="absolute -top-10 right-0 bg-white rounded shadow border px-2 py-1 flex gap-2">
+                                                            <button onClick={(e) => { e.stopPropagation(); openAnimModal(el, 'element', container.id, column.id); }} className="text-slate-500 hover:text-indigo-600"><Wand2 size={14} /></button>
+                                                            <button onClick={() => deleteElement(container.id, column.id, el.id)} className="text-slate-500 hover:text-red-500"><Trash2 size={14} /></button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             )}
 
                                             {/* 7. TABLE Element */}
@@ -426,6 +468,12 @@ export default function ContainerBoard({
                                                 >
                                                     {isActive && (
                                                         <div className="absolute top-0 left-0 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-1.5 flex items-center gap-3 z-50">
+                                                            {/* 💡 엘리먼트 애니메이션 버튼 */}
+                                                            <button onMouseDown={(e) => { e.preventDefault(); openAnimModal(el, 'element', container.id, column.id); }} className="flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-indigo-600" title="애니메이션 효과">
+                                                                <Wand2 size={14} /> 애니
+                                                            </button>
+                                                            <div className="w-px h-4 bg-slate-300" />
+
                                                             {selectedCells.size > 1 && (
                                                                 <button onClick={() => mergeCells(container.id, column.id, el.id, el.tableData!)} className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800">
                                                                     <Merge size={14} /> 병합
@@ -577,13 +625,18 @@ export default function ContainerBoard({
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-0 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-2 z-50 whitespace-nowrap overflow-x-auto">
 
-                                                            {/* 💡 HTML 소스 편집 버튼 추가 */}
                                                             <button
                                                                 onMouseDown={(e) => toggleHtmlMode(e, el.id)}
                                                                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors ${htmlModeElements[el.id] ? 'bg-slate-800 text-green-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                                                 title="HTML 소스 직접 편집"
                                                             >
                                                                 <Code size={14} /> HTML
+                                                            </button>
+                                                            <div className="w-px h-4 bg-slate-300" />
+
+                                                            {/* 💡 엘리먼트 애니메이션 버튼 */}
+                                                            <button onMouseDown={(e) => { e.preventDefault(); openAnimModal(el, 'element', container.id, column.id); }} className="flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600" title="애니메이션 효과">
+                                                                <Wand2 size={14} /> 애니
                                                             </button>
                                                             <div className="w-px h-4 bg-slate-300" />
 
@@ -671,7 +724,6 @@ export default function ContainerBoard({
                                                         </div>
                                                     )}
 
-                                                    {/* 💡 HTML 모드일 때 Textarea 노출 (카드 컴포넌트) */}
                                                     {htmlModeElements[el.id] ? (
                                                         <textarea
                                                             value={el.content}

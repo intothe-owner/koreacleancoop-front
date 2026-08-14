@@ -52,6 +52,7 @@ export default function VisualPageBuilder() {
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
     const [isDraggingCell, setIsDraggingCell] = useState(false);
     const [animModalOpen, setAnimModalOpen] = useState<string | null>(null);
+    const [animTarget, setAnimTarget] = useState<{ type: 'container' | 'element', containerId?: string, columnId?: string }>({ type: 'container' });
     const [tempAnim, setTempAnim] = useState<AnimationConfig>({ type: "none", duration: 0.5, delay: 0 });
 
     const [aiModalOpen, setAiModalOpen] = useState(false);
@@ -149,7 +150,7 @@ export default function VisualPageBuilder() {
                 }
                 if (page) {
                     setPageId(page.id);
-                    
+
                     // 💡 저장된 데이터 불러올 때도 여백 정리 적용
                     const cleanedContainers = (page.contentBlocks || []).map((container: ContainerNode) => ({
                         ...container,
@@ -242,8 +243,8 @@ export default function VisualPageBuilder() {
                 await loadPageData(selectedMenuId);
             } else alert("저장 실패: " + json.message);
         } catch (error) {
-            console.log(error); 
-            alert("서버와 통신 중 오류가 발생했습니다."); 
+            console.log(error);
+            alert("서버와 통신 중 오류가 발생했습니다.");
         }
     };
 
@@ -341,8 +342,27 @@ export default function VisualPageBuilder() {
         setActiveElementId(null); setActiveSlideFocus(null); setSelectedCells(new Set());
     };
 
-    const openAnimModal = (container: ContainerNode) => { setTempAnim(container.animation || { type: "none", duration: 0.5, delay: 0 }); setAnimModalOpen(container.id); };
-    const saveAnimConfig = () => { if (animModalOpen) { setContainers(containers.map(c => c.id === animModalOpen ? { ...c, animation: tempAnim } : c)); setAnimModalOpen(null); } };
+    const openAnimModal = (item: any, type: 'container' | 'element' = 'container', containerId?: string, columnId?: string) => {
+        setTempAnim(item.animation || { type: "none", duration: 0.5, delay: 0 });
+        setAnimTarget({ type, containerId, columnId });
+        setAnimModalOpen(item.id);
+    };
+    const saveAnimConfig = () => {
+        if (animModalOpen) {
+            if (animTarget.type === 'container') {
+                setContainers(containers.map(c => c.id === animModalOpen ? { ...c, animation: tempAnim } : c));
+            } else {
+                setContainers(containers.map(c => c.id === animTarget.containerId ? {
+                    ...c,
+                    columns: c.columns.map(col => col.id === animTarget.columnId ? {
+                        ...col,
+                        elements: col.elements.map(el => el.id === animModalOpen ? { ...el, animation: tempAnim } : el)
+                    } : col)
+                } : c));
+            }
+            setAnimModalOpen(null);
+        }
+    };
 
     const addContainer = (layoutStr: string) => {
         const widths = layoutStr.split("+");
