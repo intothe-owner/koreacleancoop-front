@@ -1,9 +1,9 @@
 // @/components/admin/ContainerBoard.tsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
     LayoutTemplate, Trash2, Wand2, Plus,
     Bold, Italic, Underline, Link as LinkIcon, Box, AlignLeft, AlignCenter, AlignRight,
-    Upload, Video, Music, ImageIcon, X, Merge, Split, Sparkles, ImagePlus, Code
+    Upload, Video, Music, ImageIcon, X, Merge, Split, Sparkles, ImagePlus, Code, GripVertical
 } from "lucide-react";
 import { ContainerNode, ElementNode, TableData } from "@/types/types";
 
@@ -49,6 +49,10 @@ export default function ContainerBoard({
 
     const [htmlModeElements, setHtmlModeElements] = useState<Record<string, boolean>>({});
 
+    const dragItem = useRef<{ containerId: string, columnId: string, elementIndex: number } | null>(null);
+    const dragOverItem = useRef<{ containerId: string, columnId: string, elementIndex: number } | null>(null);
+    const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
+
     const toggleHtmlMode = (e: React.MouseEvent, id: string) => {
         e.preventDefault();
         e.stopPropagation();
@@ -61,6 +65,70 @@ export default function ContainerBoard({
             case "2/3": return "w-2/3"; case "1/4": return "w-1/4"; case "3/4": return "w-3/4";
             default: return "w-full";
         }
+    };
+
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, containerId: string, columnId: string, elementIndex: number) => {
+        dragItem.current = { containerId, columnId, elementIndex };
+        setIsDraggingGlobal(true);
+        e.dataTransfer.effectAllowed = "move";
+        
+        const target = e.target as HTMLElement;
+        setTimeout(() => {
+            target.classList.add("opacity-50", "border-dashed", "border-2", "border-indigo-500");
+        }, 0);
+    };
+
+    const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, containerId: string, columnId: string, elementIndex: number) => {
+        e.preventDefault();
+        dragOverItem.current = { containerId, columnId, elementIndex };
+        const target = e.currentTarget as HTMLElement;
+        target.classList.add("border-t-4", "border-indigo-500");
+    };
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        const target = e.currentTarget as HTMLElement;
+        target.classList.remove("border-t-4", "border-indigo-500");
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetContainerId: string, targetColumnId: string, targetElementIndex: number) => {
+        e.preventDefault();
+        const target = e.currentTarget as HTMLElement;
+        target.classList.remove("border-t-4", "border-indigo-500");
+
+        if (!dragItem.current || !dragOverItem.current) return;
+
+        const { containerId: sourceContainerId, columnId: sourceColumnId, elementIndex: sourceIndex } = dragItem.current;
+
+        if (sourceContainerId === targetContainerId && sourceColumnId === targetColumnId && sourceIndex === targetElementIndex) {
+            return;
+        }
+
+        const newContainers = [...containers];
+        const sourceContainer = newContainers.find(c => c.id === sourceContainerId);
+        const targetContainer = newContainers.find(c => c.id === targetContainerId);
+        
+        if (!sourceContainer || !targetContainer) return;
+
+        const sourceColumn = sourceContainer.columns.find(c => c.id === sourceColumnId);
+        const targetColumn = targetContainer.columns.find(c => c.id === targetColumnId);
+
+        if (!sourceColumn || !targetColumn) return;
+
+        const [draggedElement] = sourceColumn.elements.splice(sourceIndex, 1);
+        targetColumn.elements.splice(targetElementIndex, 0, draggedElement);
+
+        setContainers(newContainers);
+        dragItem.current = null;
+        dragOverItem.current = null;
+        setIsDraggingGlobal(false);
+    };
+
+    const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+        setIsDraggingGlobal(false);
+        const target = e.target as HTMLElement;
+        target.classList.remove("opacity-50", "border-dashed", "border-2", "border-indigo-500");
+        dragItem.current = null;
+        dragOverItem.current = null;
     };
 
     return (
@@ -95,11 +163,38 @@ export default function ContainerBoard({
                         {container.columns.map((column) => (
                             <div key={column.id} className={`${getWidthClass(column.width)} flex-shrink-0 flex flex-col gap-1 relative`} style={{ width: `calc(${eval(column.width) * 100}% - 0.5rem)` }}>
 
-                                {column.elements.map((el) => {
+                                {column.elements.length === 0 && (
+                                    <div 
+                                        className="h-20 border-2 border-dashed border-slate-300 rounded flex items-center justify-center text-slate-400"
+                                        onDragEnter={(e) => handleDragEnter(e, container.id, column.id, 0)}
+                                        onDragLeave={handleDragLeave}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => handleDrop(e, container.id, column.id, 0)}
+                                    >
+                                        빈 영역 (요소를 드래그하여 드랍하세요)
+                                    </div>
+                                )}
+
+                                {column.elements.map((el, index) => {
                                     const isActive = activeElementId === el.id;
 
                                     return (
-                                        <div key={el.id} className={`element-box relative flex w-full ${el.type === 'TEXT' ? 'py-1 px-4' : 'p-4'}`} style={{ justifyContent: el.styles?.layerAlign || 'flex-start' }}>
+                                        <div 
+                                            key={el.id} 
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, container.id, column.id, index)}
+                                            onDragEnter={(e) => handleDragEnter(e, container.id, column.id, index)}
+                                            onDragLeave={handleDragLeave}
+                                            onDragOver={(e) => e.preventDefault()}
+                                            onDrop={(e) => handleDrop(e, container.id, column.id, index)}
+                                            onDragEnd={handleDragEnd}
+                                            className={`element-box relative flex w-full transition-transform ${el.type === 'TEXT' ? 'py-1 px-4' : 'p-4'} ${isDraggingGlobal ? 'cursor-grabbing' : 'cursor-grab'} hover:bg-slate-100/50`} 
+                                            style={{ justifyContent: el.styles?.layerAlign || 'flex-start' }}
+                                        >
+
+                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 p-1 text-slate-300 cursor-grab hover:text-indigo-500 z-50">
+                                                <GripVertical size={16} />
+                                            </div>
 
                                             {/* 💡 개별 엘리먼트에 애니메이션이 적용되어 있으면 뱃지로 표시 */}
                                             {el.animation && el.animation.type !== 'none' && (
@@ -112,7 +207,7 @@ export default function ContainerBoard({
                                             {el.type === "TEXT" && el.styles && (
                                                 <div
                                                     id={`element-${el.id}`}
-                                                    className={`relative group inline-block w-full ${isActive ? 'outline outline-2 outline-[#00d0d0]' : 'hover:outline hover:outline-1 hover:outline-slate-300'}`}
+                                                    className={`relative group inline-block w-full ml-4 ${isActive ? 'outline outline-2 outline-[#00d0d0]' : 'hover:outline hover:outline-1 hover:outline-slate-300'}`}
                                                     onMouseDown={(e) => {
                                                         e.stopPropagation();
                                                         if (activeElementId !== el.id) setActiveElementId(el.id);
@@ -266,7 +361,7 @@ export default function ContainerBoard({
 
                                             {/* 2. IMAGE Element */}
                                             {el.type === "IMAGE" && (
-                                                <div className="w-full relative group hover:outline outline-2 outline-indigo-200 rounded" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
+                                                <div className="w-full relative group hover:outline outline-2 outline-indigo-200 rounded ml-4" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {el.content ? (
                                                         <div className="relative border rounded overflow-hidden">
                                                             <img src={el.content} alt="업로드/생성 이미지" className="w-full h-auto object-cover max-h-64 min-h-[100px] bg-slate-100" />
@@ -328,7 +423,7 @@ export default function ContainerBoard({
 
                                             {/* 3. VIDEO Element */}
                                             {el.type === "VIDEO" && (
-                                                <div className="w-full relative" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
+                                                <div className="w-full relative ml-4" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {el.content ? (
                                                         <div className="relative border rounded overflow-hidden bg-black">
                                                             <video src={el.content} controls className="w-full max-h-64 object-contain" />
@@ -361,7 +456,7 @@ export default function ContainerBoard({
 
                                             {/* 4. AUDIO Element */}
                                             {el.type === "AUDIO" && (
-                                                <div className="w-full relative" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
+                                                <div className="w-full relative ml-4" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {el.content ? (
                                                         <div className="relative border rounded p-4 bg-white flex flex-col gap-2 w-full pt-10">
                                                             <audio src={el.content} controls className="w-full" />
@@ -394,7 +489,7 @@ export default function ContainerBoard({
 
                                             {/* 5. BUTTON Element */}
                                             {el.type === "BUTTON" && el.buttonStyles && (
-                                                <div className="p-4 flex flex-col justify-center items-center w-full relative" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
+                                                <div className="p-4 flex flex-col justify-center items-center w-full relative ml-4" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-3 z-50 whitespace-nowrap">
                                                             {/* 💡 엘리먼트 애니메이션 버튼 */}
@@ -447,7 +542,7 @@ export default function ContainerBoard({
 
                                             {/* 6. SEPARATOR Element */}
                                             {el.type === "SEPARATOR" && (
-                                                <div className="w-full h-4 border-b-2 border-dashed border-slate-300 relative group" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
+                                                <div className="w-full h-4 border-b-2 border-dashed border-slate-300 relative group ml-4" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {isActive && (
                                                         <div className="absolute -top-10 right-0 bg-white rounded shadow border px-2 py-1 flex gap-2">
                                                             <button onClick={(e) => { e.stopPropagation(); openAnimModal(el, 'element', container.id, column.id); }} className="text-slate-500 hover:text-indigo-600"><Wand2 size={14} /></button>
@@ -460,7 +555,7 @@ export default function ContainerBoard({
                                             {/* 7. TABLE Element */}
                                             {el.type === "TABLE" && el.tableData && (
                                                 <div
-                                                    className="relative w-full overflow-x-auto pt-8 pb-4"
+                                                    className="relative w-full overflow-x-auto pt-8 pb-4 ml-4"
                                                     onMouseDown={(e) => {
                                                         e.stopPropagation();
                                                         setActiveElementId(el.id);
@@ -621,7 +716,7 @@ export default function ContainerBoard({
 
                                             {/* 9. CARD Element */}
                                             {el.type === "CARD" && el.cardData && (
-                                                <div className="w-full relative" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
+                                                <div className="w-full relative ml-4" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-0 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-2 z-50 whitespace-nowrap overflow-x-auto">
 
