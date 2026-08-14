@@ -245,7 +245,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
 
       {/* 모바일 전체 메뉴 오픈 시 나타나는 레이어 */}
       {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-[104px] left-0 w-full z-50 bg-white dark:bg-slate-900 shadow-lg max-h-[calc(100vh-6.5rem)] overflow-y-auto flex flex-col">
+        <div className="md:hidden absolute top-[65px] left-0 w-full z-50 bg-white dark:bg-slate-900 shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto flex flex-col">
           <nav className="flex flex-col py-2">
             {menus.map((menu) => (
               <div key={menu.id} className="border-b border-slate-100 dark:border-slate-800 last:border-none">
