@@ -32,6 +32,7 @@ export default function VisualPageBuilder() {
         return html
             .replace(/[\r\n\t]+/g, ' ') // 1. 엔터, 캐리지리턴, 탭을 공백 1칸으로 치환
             .replace(/\s{2,}/g, ' ')    // 2. 연속된 2칸 이상의 공백을 1칸으로 압축
+            .replace(/>\s+</g, '><')    // 💡 [추가] 태그와 태그 사이의 공백 완전히 제거
             .trim();
     };
 
@@ -132,11 +133,13 @@ export default function VisualPageBuilder() {
     useEffect(() => { loadPageData(selectedMenuId); }, [selectedMenuId]);
 
     const loadPageData = async (menuId: string) => {
+        
         if (menuId === "") {
             setPageId(null); setContainers([]); setSlides([]); setSliderType("none"); return;
         }
+
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/`);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/${menuId}`);
             const json = await res.json();
             if (json.success) {
                 const targetMenuId = menuId === "0" ? null : Number(menuId);
