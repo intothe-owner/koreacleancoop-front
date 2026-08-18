@@ -161,7 +161,8 @@ export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
                         fontStyle: el.styles?.fontStyle || "normal",
                         textDecoration: el.styles?.textDecoration || "none",
                       }}
-                      dangerouslySetInnerHTML={{ __html: cleanHtmlForTheme(el.content) }}
+                      dangerouslySetInnerHTML={{ __html: el.content }}
+                      // dangerouslySetInnerHTML={{ __html: cleanHtmlForTheme(el.content) }}
                       className="whitespace-pre-wrap break-words prose prose-slate dark:prose-invert max-w-none w-full"
                     />
                   )}
