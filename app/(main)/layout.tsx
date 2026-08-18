@@ -31,7 +31,9 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     const adminCheckRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/check-admin`, { 
       cache: "no-store" 
     });
+    console.log(adminCheckRes);
     const adminCheckJson = await adminCheckRes.json();
+    console.log(adminCheckJson);
     if (adminCheckJson.success) {
       hasAdmin = adminCheckJson.hasAdmin;
     }
@@ -41,7 +43,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   // 2. 관리자가 없으면 /setup 으로 강제 이동
   if (!hasAdmin) {
-    redirect("/setup");
+    //redirect("/setup");
   }
 
   // 3. 이후 기존 데이터 페칭 로직 정상 실행

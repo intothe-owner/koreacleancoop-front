@@ -24,6 +24,7 @@ export default function VisualPageBuilder() {
     const [pageId, setPageId] = useState<number | null>(null);
     const [pageMeta, setPageMeta] = useState({ bgImage: '', bgTitle: '' });
     const [metaBgFile, setMetaBgFile] = useState<File | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     // 💡 [핵심 수정] 줄바꿈(\n)과 탭(\t)을 스페이스바 한 칸(' ')으로 변경하는 함수
     // 컴포넌트 스코프 상단에 배치하여 어디서든 사용할 수 있게 합니다.
@@ -132,66 +133,75 @@ export default function VisualPageBuilder() {
 
     useEffect(() => { loadPageData(selectedMenuId); }, [selectedMenuId]);
 
+    // @/components/main/VisualPageBuilder.tsx
+
     const loadPageData = async (menuId: string) => {
-        
+
         if (menuId === "") {
-            setPageId(null); setContainers([]); setSlides([]); setSliderType("none"); return;
+            setPageId(null); setContainers([]); setSlides([]); setSliderType("none");
+            setPageMeta({ bgImage: '', bgTitle: '' });
+            return;
         }
 
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/${menuId}`);
             const json = await res.json();
-            if (json.success) {
-                const targetMenuId = menuId === "0" ? null : Number(menuId);
-                const targetMenu = menus.find(m => m.id === targetMenuId);
-                let page = undefined;
-                if (targetMenu && targetMenu.url) {
-                    const sharedMenuIds = menus.filter(m => m.url === targetMenu.url).map(m => m.id);
-                    page = json.data.find((p: any) => p.menuId !== null && sharedMenuIds.includes(p.menuId));
-                } else {
-                    page = json.data.find((p: any) => p.menuId === targetMenuId);
-                }
-                if (page) {
-                    setPageId(page.id);
 
-                    // 💡 저장된 데이터 불러올 때도 여백 정리 적용
-                    const cleanedContainers = (page.contentBlocks || []).map((container: ContainerNode) => ({
-                        ...container,
-                        columns: container.columns.map(col => ({
-                            ...col,
-                            elements: col.elements.map(el => ({
-                                ...el,
-                                content: cleanHtml(el.content)
-                            }))
+            // 💡 json.success가 true이고 데이터가 있을 때만 페이지 렌더링
+            if (json.success && json.data) {
+                const page = json.data;
+
+                setPageId(page.id);
+
+                const cleanedContainers = (page.contentBlocks || []).map((container: ContainerNode) => ({
+                    ...container,
+                    columns: container.columns.map(col => ({
+                        ...col,
+                        elements: col.elements.map(el => ({
+                            ...el,
+                            content: cleanHtml(el.content)
                         }))
-                    }));
-                    setContainers(cleanedContainers);
+                    }))
+                }));
+                setContainers(cleanedContainers);
 
-                    const savedMeta = page.pageMeta || { bgImage: '', bgTitle: '' };
-                    setPageMeta(savedMeta);
+                const savedMeta = page.pageMeta || { bgImage: '', bgTitle: '' };
+                setPageMeta(savedMeta);
 
-                    if (page.sliderData && page.sliderData.length > 0) {
-                        setSlides(page.sliderData);
-                        setSliderType(page.sliderData[0].type || "image");
-                    }
-                    else if (savedMeta.bgImage || savedMeta.bgTitle) {
-                        setSlides([]);
-                        setSliderType("header");
-                    }
-                    else {
-                        setSlides([]);
-                        setSliderType("none");
-                    }
-                } else {
-                    setPageId(null); setContainers([]); setSlides([]); setSliderType("none");
-                    setPageMeta({ bgImage: '', bgTitle: '' });
+                if (page.sliderData && page.sliderData.length > 0) {
+                    setSlides(page.sliderData);
+                    setSliderType(page.sliderData[0].type || "image");
                 }
+                else if (savedMeta.bgImage || savedMeta.bgTitle) {
+                    setSlides([]);
+                    setSliderType("header");
+                }
+                else {
+                    setSlides([]);
+                    setSliderType("none");
+                }
+            } else {
+                // 💡 [추가된 부분] 페이지가 존재하지 않거나(success: false) 데이터가 없을 때 이전 상태 지우기
+                setPageId(null);
+                setContainers([]);
+                setSlides([]);
+                setSliderType("none");
+                setPageMeta({ bgImage: '', bgTitle: '' });
             }
-        } catch (error) { console.error("데이터 로딩 실패:", error); }
+        } catch (error) {
+            console.error("데이터 로딩 실패:", error);
+            // 💡 통신 오류 시에도 이전 페이지 내용이 남지 않도록 초기화
+            setPageId(null);
+            setContainers([]);
+            setSlides([]);
+            setSliderType("none");
+            setPageMeta({ bgImage: '', bgTitle: '' });
+        }
     };
 
     const handleSave = async () => {
         if (!title.trim()) return alert("페이지 제목을 입력해주세요.");
+        setIsSaving(true);
         const formData = new FormData();
         formData.append("menuId", selectedMenuId === "0" ? "" : selectedMenuId);
         formData.append("title", title);
@@ -248,6 +258,9 @@ export default function VisualPageBuilder() {
         } catch (error) {
             console.log(error);
             alert("서버와 통신 중 오류가 발생했습니다.");
+        } finally {
+            // 💡 [추가] 저장이 끝났으므로(성공/실패 무관) 상태 해제
+            setIsSaving(false);
         }
     };
 
@@ -374,21 +387,7 @@ export default function VisualPageBuilder() {
         setLayoutModalOpen(false);
     };
 
-    const addElement = (type: ElementType) => {
-        if (!elementModalOpen) return;
-        const { containerId, columnId } = elementModalOpen;
-        const newElement: ElementNode = {
-            id: Math.random().toString(36).substr(2, 9), type,
-            content: type === "TEXT" ? "제목을 입력해주세요." : "",
-            styles: type === "TEXT" ? { fontFamily: "default", fontSize: 32, color: "#000000", textAlign: "left", layerAlign: "flex-start", linkUrl: "", width: "auto", height: "auto" } : undefined
-        };
-        setContainers(containers.map(container =>
-            container.id === containerId ? {
-                ...container, columns: container.columns.map(col => col.id === columnId ? { ...col, elements: [...col.elements, newElement] } : col)
-            } : container
-        ));
-        setElementModalOpen(null);
-    };
+   
 
     const updateElementProps = (containerId: string, columnId: string, elementId: string, propCategory: 'styles' | 'buttonStyles' | 'tableData' | 'cardData', key: string, value: any) => {
         const editableDiv = document.getElementById(`editable-${elementId}`);
@@ -479,27 +478,77 @@ export default function VisualPageBuilder() {
         else savedRangeRef.current = null;
     };
 
-    const handleResizeStart = (e: React.MouseEvent, containerId: string, columnId: string, el: ElementNode, direction: string) => {
-        e.stopPropagation(); e.preventDefault();
-        const elementNode = document.getElementById(`element-${el.id}`);
-        if (!elementNode) return;
-        const startX = e.clientX, startY = e.clientY, startWidth = elementNode.offsetWidth, startHeight = elementNode.offsetHeight;
-        const handleMouseMove = (moveEvent: MouseEvent) => {
-            let newWidth = startWidth, newHeight = startHeight;
-            const deltaX = moveEvent.clientX - startX, deltaY = moveEvent.clientY - startY;
-            if (direction.includes("e")) newWidth = startWidth + deltaX;
-            if (direction.includes("w")) newWidth = startWidth - deltaX;
+    // 💡 1. addElement 함수 수정: 비율 유지(keepAspectRatio) 속성 기본값 추가
+ const addElement = (type: ElementType) => {
+        if (!elementModalOpen) return;
+        const { containerId, columnId } = elementModalOpen;
+        const newElement: ElementNode = {
+            id: Math.random().toString(36).substr(2, 9), type,
+            content: type === "TEXT" ? "제목을 입력해주세요." : "",
+            // 💡 keepAspectRatio: true 를 추가하여 기본적으로 비율이 유지되도록 설정
+            styles: { fontFamily: "default", fontSize: 32, color: "#000000", textAlign: "left", layerAlign: "flex-start", linkUrl: "", width: "auto", height: "auto", keepAspectRatio: true }
+        };
+        setContainers(containers.map(container =>
+            container.id === containerId ? {
+                ...container, columns: container.columns.map(col => col.id === columnId ? { ...col, elements: [...col.elements, newElement] } : col)
+            } : container
+        ));
+        setElementModalOpen(null);
+    };
+
+
+// 💡 2. handleResizeStart 함수 수정: 드래그 시 '비율 유지' 체크 여부에 따라 동작 분기
+const handleResizeStart = (e: React.MouseEvent, containerId: string, columnId: string, el: ElementNode, direction: string) => {
+    e.stopPropagation(); e.preventDefault();
+    const elementNode = document.getElementById(`element-${el.id}`);
+    if (!elementNode) return;
+    const startX = e.clientX, startY = e.clientY, startWidth = elementNode.offsetWidth, startHeight = elementNode.offsetHeight;
+    
+    // 💡 이미지 엘리먼트이면서 비율 유지가 켜져있는지 확인 (기본값 true)
+    const isLocked = el.type === "IMAGE" && el.styles?.keepAspectRatio !== false;
+    const ratio = startHeight / startWidth;
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+        let newWidth = startWidth, newHeight = startHeight;
+        const deltaX = moveEvent.clientX - startX, deltaY = moveEvent.clientY - startY;
+        
+        if (direction.includes("e")) newWidth = startWidth + deltaX;
+        if (direction.includes("w")) newWidth = startWidth - deltaX;
+        
+        if (isLocked) {
+            // 💡 비율 유지: 넓이 변경량에 맞춰 높이를 강제 계산
+            newHeight = newWidth * ratio;
+        } else {
+            // 💡 자유 변형: 위아래 드래그를 허용
             if (direction.includes("s")) newHeight = startHeight + deltaY;
             if (direction.includes("n")) newHeight = startHeight - deltaY;
-            setContainers((prev) => prev.map((container) => container.id === containerId ? {
-                ...container, columns: container.columns.map((col) => col.id === columnId ? {
-                    ...col, elements: col.elements.map((element) => element.id === el.id && element.styles ? { ...element, styles: { ...element.styles, width: Math.max(50, newWidth), height: Math.max(30, newHeight) } } : element)
-                } : col)
-            } : container));
-        };
-        const handleMouseUp = () => { document.removeEventListener("mousemove", handleMouseMove); document.removeEventListener("mouseup", handleMouseUp); };
-        document.addEventListener("mousemove", handleMouseMove); document.addEventListener("mouseup", handleMouseUp);
+        }
+        
+        setContainers((prev) => prev.map((container) => container.id === containerId ? {
+            ...container, columns: container.columns.map((col) => col.id === columnId ? {
+                ...col, elements: col.elements.map((element) => element.id === el.id ? { 
+                    ...element, 
+                    styles: { 
+                        // 💡 에러 원인 해결: TextStyles에서 필수로 요구하는 속성들을 모두 기본값으로 채워줍니다!
+                        ...(element.styles || { 
+                            fontFamily: "default", 
+                            fontSize: 16, 
+                            color: "#000000", 
+                            textAlign: "left", 
+                            layerAlign: "flex-start", 
+                            linkUrl: "", 
+                            keepAspectRatio: true 
+                        }), 
+                        width: `${Math.max(50, newWidth)}px`, 
+                        height: `${Math.max(30, newHeight)}px` 
+                    } 
+                } : element)
+            } : col)
+        } : container));
     };
+    const handleMouseUp = () => { document.removeEventListener("mousemove", handleMouseMove); document.removeEventListener("mouseup", handleMouseUp); };
+    document.addEventListener("mousemove", handleMouseMove); document.addEventListener("mouseup", handleMouseUp);
+};
 
     const openTableConfig = () => { if (!elementModalOpen) return; setTableConfigModalOpen({ containerId: elementModalOpen.containerId, columnId: elementModalOpen.columnId }); setElementModalOpen(null); setTableInputs({ rows: 3, cols: 3 }); };
     const confirmTableConfig = () => {
@@ -554,6 +603,7 @@ export default function VisualPageBuilder() {
                 selectedMenuId={selectedMenuId}
                 setSelectedMenuId={setSelectedMenuId}
                 menus={menus} title={title} setTitle={setTitle} handleSave={handleSave}
+                isSaving={isSaving}
             />
 
             <SlideManager
