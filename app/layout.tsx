@@ -1,5 +1,7 @@
 
+
 import "./globals.css";
+import QueryProvider from "@/components/QueryClientProvider";
 
 export default function RootLayout({
   children,
@@ -10,9 +12,9 @@ export default function RootLayout({
     // suppressHydrationWarning은 서버/클라이언트 테마 불일치 경고를 방지합니다.
     <html lang="ko" suppressHydrationWarning>
       <body>
-        
+        <QueryProvider>
           {children}
-        
+        </QueryProvider>
       </body>
     </html>
   );

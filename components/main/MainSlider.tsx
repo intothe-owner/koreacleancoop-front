@@ -90,7 +90,7 @@ export default function MainSlider({ slides }: MainSliderProps) {
               )
             )}
             
-            <div className="absolute inset-0 bg-black/20" />
+            <div className="absolute inset-0" />
             
             <SlideContent slide={slide} />
           </SwiperSlide>

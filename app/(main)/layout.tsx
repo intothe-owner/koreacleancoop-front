@@ -31,9 +31,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     const adminCheckRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/check-admin`, { 
       cache: "no-store" 
     });
-    console.log(adminCheckRes);
     const adminCheckJson = await adminCheckRes.json();
-    console.log(adminCheckJson);
     if (adminCheckJson.success) {
       hasAdmin = adminCheckJson.hasAdmin;
     }
@@ -89,12 +87,12 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   };
 
   return (
-    <ThemeProvider 
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
+    <ThemeProvider
+          attribute="class" // (권장) TailwindCSS의 dark 클래스와 연동하기 위함
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
       {/* 💡 매 페이지 접근마다 토큰 만료를 감시하는 컴포넌트 추가 */}
       <TokenChecker /> 
       

@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useTheme } from "next-themes"; // 💡 next-themes 추가
+import { useTheme } from "@teispace/next-themes"; // 💡 next-themes 추가
 import Header from "@/components/main/Header";
 import Footer from "@/components/main/Footer";
 import PopupRenderer from "@/components/main/PopupRenderer";
@@ -118,7 +118,7 @@ export default function ClientLayoutWrapper({
   if (!settings) return null;
 
   // 4. 레이아웃 Display 모드 설정
-  let displayClass = "w-full transition-colors duration-300 min-h-screen flex flex-col mx-auto pt-24";
+  let displayClass = "w-full transition-colors duration-300 min-h-screen flex flex-col mx-auto ";
   
   switch (settings.displayMode) {
     case "MOBILE_ONLY":
