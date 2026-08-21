@@ -73,20 +73,53 @@ export default function ContainerBoard({
     }, [selectedInlineImg]);
 
     // 💡 인라인 이미지 클릭 핸들러
+    // 💡 인라인 이미지 클릭 핸들러 (z-index < 0 및 레이어 겹침 해결)
     const handleInlineImgClick = (e: React.MouseEvent, elId: string, cellKey?: string) => {
         const target = e.target as HTMLElement;
+        let imgNode: HTMLImageElement | null = null;
+
+        // 1. 직접 클릭된 대상이 이미지인 경우 (기존 정상 동작)
         if (target.tagName === 'IMG') {
-            const rect = target.getBoundingClientRect();
-            setSelectedInlineImg({
-                elId,
-                node: target as HTMLImageElement,
-                top: rect.top,
-                left: rect.left,
-                cellKey
-            });
+            imgNode = target as HTMLImageElement;
         } else {
-            setSelectedInlineImg(null);
+            // 2. z-index가 낮아 다른 레이어(div)에 덮여있을 경우 처리
+            // 클릭한 X, Y 좌표에 수직으로 겹쳐진 모든 DOM 요소를 가져옵니다.
+            const elementsAtPoint = document.elementsFromPoint(e.clientX, e.clientY);
+            const foundImg = elementsAtPoint.find(el => el.tagName === 'IMG') as HTMLImageElement;
+            
+            if (foundImg) {
+                imgNode = foundImg;
+            } else {
+                // 3. 클릭한 div(래퍼) 하위에 이미지가 있는 경우 (Fallback)
+                // z-index 문제가 아니라 빈 영역을 클릭했을 때 자식 이미지를 툴바로 띄우고 싶을 때 작동합니다.
+                const childImg = target.querySelector?.('img');
+                if (childImg) {
+                    imgNode = childImg as HTMLImageElement;
+                }
+            }
         }
+
+        // 이미지를 찾은 경우 툴바 상태 업데이트
+        if (imgNode) {
+            // 💡 선택된 이미지가 현재 클릭한 엘리먼트 편집 영역 내부의 이미지인지 한 번 더 검증
+            const editorId = cellKey ? `editable-${elId}-${cellKey}` : `editable-${elId}`;
+            const editorDiv = document.getElementById(editorId);
+
+            if (editorDiv && editorDiv.contains(imgNode)) {
+                const rect = imgNode.getBoundingClientRect();
+                setSelectedInlineImg({
+                    elId,
+                    node: imgNode,
+                    top: rect.top,
+                    left: rect.left,
+                    cellKey
+                });
+                return; // 성공적으로 이미지를 찾았으므로 종료
+            }
+        }
+
+        // 이미지를 찾지 못했거나 검증에 실패하면 툴바를 숨깁니다.
+        setSelectedInlineImg(null);
     };
 
     // 💡 인라인 이미지 변경/삭제 후 HTML 내용을 저장하는 함수
