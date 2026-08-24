@@ -52,7 +52,6 @@ export default function ContainerBoard({
     const dragOverItem = useRef<{ containerId: string, columnId: string, elementIndex: number } | null>(null);
     const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
 
-    // 💡 HTML 내부 인라인 이미지를 클릭했을 때 띄울 툴바의 상태 관리
     const [selectedInlineImg, setSelectedInlineImg] = useState<{
         elId: string;
         node: HTMLImageElement;
@@ -61,7 +60,6 @@ export default function ContainerBoard({
         cellKey?: string;
     } | null>(null);
 
-    // 활성화된 엘리먼트가 바뀌거나 스크롤이 발생하면 인라인 이미지 툴바 닫기
     useEffect(() => {
         if (!activeElementId) setSelectedInlineImg(null);
     }, [activeElementId]);
@@ -72,36 +70,24 @@ export default function ContainerBoard({
         return () => window.removeEventListener('scroll', handleScroll, true);
     }, [selectedInlineImg]);
 
-    // 💡 인라인 이미지 클릭 핸들러
-    // 💡 인라인 이미지 클릭 핸들러 (z-index < 0 및 레이어 겹침 해결)
     const handleInlineImgClick = (e: React.MouseEvent, elId: string, cellKey?: string) => {
         const target = e.target as HTMLElement;
         let imgNode: HTMLImageElement | null = null;
 
-        // 1. 직접 클릭된 대상이 이미지인 경우 (기존 정상 동작)
         if (target.tagName === 'IMG') {
             imgNode = target as HTMLImageElement;
         } else {
-            // 2. z-index가 낮아 다른 레이어(div)에 덮여있을 경우 처리
-            // 클릭한 X, Y 좌표에 수직으로 겹쳐진 모든 DOM 요소를 가져옵니다.
             const elementsAtPoint = document.elementsFromPoint(e.clientX, e.clientY);
             const foundImg = elementsAtPoint.find(el => el.tagName === 'IMG') as HTMLImageElement;
-            
             if (foundImg) {
                 imgNode = foundImg;
             } else {
-                // 3. 클릭한 div(래퍼) 하위에 이미지가 있는 경우 (Fallback)
-                // z-index 문제가 아니라 빈 영역을 클릭했을 때 자식 이미지를 툴바로 띄우고 싶을 때 작동합니다.
                 const childImg = target.querySelector?.('img');
-                if (childImg) {
-                    imgNode = childImg as HTMLImageElement;
-                }
+                if (childImg) imgNode = childImg as HTMLImageElement;
             }
         }
 
-        // 이미지를 찾은 경우 툴바 상태 업데이트
         if (imgNode) {
-            // 💡 선택된 이미지가 현재 클릭한 엘리먼트 편집 영역 내부의 이미지인지 한 번 더 검증
             const editorId = cellKey ? `editable-${elId}-${cellKey}` : `editable-${elId}`;
             const editorDiv = document.getElementById(editorId);
 
@@ -114,38 +100,10 @@ export default function ContainerBoard({
                     left: rect.left,
                     cellKey
                 });
-                return; // 성공적으로 이미지를 찾았으므로 종료
+                return;
             }
         }
-
-        // 이미지를 찾지 못했거나 검증에 실패하면 툴바를 숨깁니다.
         setSelectedInlineImg(null);
-    };
-
-    // 💡 인라인 이미지 변경/삭제 후 HTML 내용을 저장하는 함수
-    const applyInlineImageChange = (elId: string, cellKey?: string) => {
-        if (cellKey) {
-            // 테이블 셀 내부 이미지일 경우
-            const container = containers.find(c => c.columns.some(col => col.elements.some(e => e.id === elId)));
-            if (!container) return;
-            const column = container.columns.find(col => col.elements.some(e => e.id === elId));
-            if (!column) return;
-            const el = column.elements.find(e => e.id === elId);
-            if (!el || !el.tableData) return;
-
-            const editableDiv = document.getElementById(`editable-${elId}-${cellKey}`);
-            if (editableDiv) {
-                const newCells = { ...el.tableData.cells };
-                newCells[cellKey].content = editableDiv.innerHTML;
-                updateElementProps(container.id, column.id, el.id, 'tableData', 'cells', newCells);
-            }
-        } else {
-            // 텍스트, 카드 엘리먼트 내부 이미지일 경우
-            const editableDiv = document.getElementById(`editable-${elId}`);
-            if (editableDiv) {
-                updateElementHtmlContent(elId, editableDiv.innerHTML);
-            }
-        }
     };
 
     const toggleHtmlMode = (e: React.MouseEvent, id: string) => {
@@ -166,7 +124,6 @@ export default function ContainerBoard({
         dragItem.current = { containerId, columnId, elementIndex };
         setIsDraggingGlobal(true);
         e.dataTransfer.effectAllowed = "move";
-
         const target = e.target as HTMLElement;
         setTimeout(() => {
             target.classList.add("opacity-50", "border-dashed", "border-2", "border-indigo-500");
@@ -286,7 +243,6 @@ export default function ContainerBoard({
                                             className={`element-box relative flex w-full transition-transform ${el.type === 'TEXT' ? 'py-1 px-4' : 'p-4'} ${isDraggingGlobal ? 'cursor-grabbing' : 'cursor-grab'} hover:bg-slate-100/50`}
                                             style={{ justifyContent: el.styles?.layerAlign || 'flex-start' }}
                                         >
-
                                             <div className="absolute left-0 top-1/2 -translate-y-1/2 p-1 text-slate-300 cursor-grab hover:text-indigo-500 z-50">
                                                 <GripVertical size={16} />
                                             </div>
@@ -329,7 +285,6 @@ export default function ContainerBoard({
                                                                 <Wand2 size={14} /> 애니
                                                             </button>
                                                             <div className="w-px h-4 bg-slate-300" />
-
                                                             {setAiModalOpen && (
                                                                 <>
                                                                     <button onMouseDown={(e) => e.preventDefault()} onClick={() => setAiModalOpen('TEXT', el.id, el.content)} className="text-purple-600 hover:text-purple-800 flex items-center gap-1 bg-purple-50 px-2 py-1 rounded" title="AI로 내용 수정">
@@ -425,9 +380,8 @@ export default function ContainerBoard({
                                                             suppressContentEditableWarning
                                                             onMouseUp={handleSelection}
                                                             onKeyUp={handleSelection}
-                                                            onClick={(e) => handleInlineImgClick(e, el.id)} // 💡 인라인 이미지 클릭 감지
+                                                            onClick={(e) => handleInlineImgClick(e, el.id)}
                                                             onBlur={(e) => {
-                                                                // 툴바 안의 버튼을 눌렀을 때는 블러 처리를 무시하여 HTML이 바로 덮어써지지 않게 보호
                                                                 if (e.relatedTarget && ((e.relatedTarget as HTMLElement).closest('.element-toolbar') || (e.relatedTarget as HTMLElement).closest('.inline-img-toolbar'))) {
                                                                     return;
                                                                 }
@@ -453,15 +407,11 @@ export default function ContainerBoard({
                                             )}
 
                                             {/* 2. IMAGE Element */}
-                                            {/* 2. IMAGE Element */}
                                             {el.type === "IMAGE" && (
                                                 <div className="w-[calc(100%-1rem)] relative group ml-4" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
 
-                                                    {/* 💡 상단 툴바: 크기 직접 입력(px, %) 및 비율 유지 체크박스 */}
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-0 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-3 z-50 whitespace-nowrap element-toolbar">
-
-                                                            {/* 가로 입력 */}
                                                             <div className="flex items-center gap-1">
                                                                 <span className="text-[10px] font-bold text-slate-500">W</span>
                                                                 <input
@@ -474,10 +424,7 @@ export default function ContainerBoard({
                                                                         const wNum = parseFloat(String(el.styles?.width || ""));
                                                                         const hNum = parseFloat(String(el.styles?.height || ""));
                                                                         const isLocked = el.styles?.keepAspectRatio !== false;
-
                                                                         updateElementStyle(container.id, column.id, el.id, "width", val ? val + wUnit : "auto");
-
-                                                                        // 비율 고정이고 양쪽 다 단위가 같을 때 자동 계산
                                                                         if (isLocked && val && wNum && hNum && wUnit === hUnit) {
                                                                             const ratio = hNum / wNum;
                                                                             updateElementStyle(container.id, column.id, el.id, "height", String(Math.round(Number(val) * ratio)) + hUnit);
@@ -500,8 +447,6 @@ export default function ContainerBoard({
                                                             </div>
 
                                                             <div className="w-px h-4 bg-slate-300" />
-
-                                                            {/* 💡 비율 유지 체크박스 (가로 100% 시 비활성화) */}
                                                             <label className={`flex items-center gap-1 text-[10px] font-bold ${String(el.styles?.width || "100%") === "100%" ? "text-slate-400 opacity-50 cursor-not-allowed" : "text-slate-600 cursor-pointer hover:text-indigo-600"}`}>
                                                                 <input
                                                                     type="checkbox"
@@ -514,8 +459,6 @@ export default function ContainerBoard({
                                                             </label>
 
                                                             <div className="w-px h-4 bg-slate-300" />
-
-                                                            {/* 💡 세로 입력 (가로 100% 시 비활성화) */}
                                                             <div className={`flex items-center gap-1 ${String(el.styles?.width || "100%") === "100%" ? 'opacity-50' : ''}`}>
                                                                 <span className="text-[10px] font-bold text-slate-500">H</span>
                                                                 <input
@@ -528,10 +471,7 @@ export default function ContainerBoard({
                                                                         const wNum = parseFloat(String(el.styles?.width || ""));
                                                                         const hNum = parseFloat(String(el.styles?.height || ""));
                                                                         const isLocked = el.styles?.keepAspectRatio !== false;
-
                                                                         updateElementStyle(container.id, column.id, el.id, "height", val ? val + hUnit : "auto");
-
-                                                                        // 비율 고정이고 양쪽 다 단위가 같을 때 자동 계산
                                                                         if (isLocked && val && wNum && hNum && wUnit === hUnit) {
                                                                             const ratio = wNum / hNum;
                                                                             updateElementStyle(container.id, column.id, el.id, "width", String(Math.round(Number(val) * ratio)) + wUnit);
@@ -556,8 +496,6 @@ export default function ContainerBoard({
                                                             </div>
 
                                                             <div className="w-px h-4 bg-slate-300" />
-                                                            
-                                                            {/* 기타 액션 버튼 */}
                                                             <button onClick={(e) => { e.preventDefault(); openAnimModal(el, 'element', container.id, column.id); }} className="flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600" title="애니메이션 효과">
                                                                 <Wand2 size={14} /> 애니
                                                             </button>
@@ -567,7 +505,6 @@ export default function ContainerBoard({
                                                         </div>
                                                     )}
 
-                                                    {/* 크기 조절을 위한 Wrapper */}
                                                     <div
                                                         id={`element-${el.id}`}
                                                         className={`relative inline-block max-w-full ${isActive ? 'outline outline-2 outline-[#00d0d0]' : 'hover:outline outline-2 outline-indigo-200'} rounded`}
@@ -577,7 +514,6 @@ export default function ContainerBoard({
                                                             maxWidth: "100%"
                                                         }}
                                                     >
-                                                        {/* 크기 조절 모서리 점 (드래그) */}
                                                         {isActive && (
                                                             <>
                                                                 <div onMouseDown={(e) => handleResizeStart(e, container.id, column.id, el, 'nw')} className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-[#00d0d0] rounded-full cursor-nwse-resize z-10" />
@@ -594,8 +530,6 @@ export default function ContainerBoard({
                                                                     alt="업로드/생성 이미지"
                                                                     className={`w-full h-full min-h-[50px] bg-slate-100 ${el.styles?.keepAspectRatio === false ? 'object-fill' : 'object-cover'}`}
                                                                 />
-
-                                                                {/* AI 기능 */}
                                                                 {el.content.includes("pollinations.ai") && (
                                                                     <div className="absolute top-0 left-0 w-full h-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-3">
                                                                         <label className="flex items-center gap-1 bg-white text-slate-800 px-3 py-1.5 rounded text-xs font-bold cursor-pointer shadow hover:bg-slate-100">
@@ -611,8 +545,6 @@ export default function ContainerBoard({
                                                                         )}
                                                                     </div>
                                                                 )}
-
-                                                                {/* 우측 상단 이미지 변경 도구 */}
                                                                 <div className="absolute top-2 right-2 flex items-center gap-2 z-20">
                                                                     <label className="flex items-center gap-1 p-1.5 bg-indigo-600 text-white rounded shadow hover:bg-indigo-700 cursor-pointer transition-colors" title="이미지 변경">
                                                                         <ImagePlus size={14} />
@@ -632,7 +564,6 @@ export default function ContainerBoard({
                                                         )}
                                                     </div>
 
-                                                    {/* 링크 입력 창 */}
                                                     <div className="mt-2 flex items-center gap-2 bg-slate-50 p-1.5 border border-slate-200 rounded">
                                                         <LinkIcon size={14} className="text-slate-400" />
                                                         <input
@@ -719,12 +650,9 @@ export default function ContainerBoard({
                                                                 <Wand2 size={14} /> 애니
                                                             </button>
                                                             <div className="w-px h-4 bg-slate-300" />
-
                                                             <input type="text" value={el.buttonStyles.text} onChange={(e) => updateElementProps(container.id, column.id, el.id, 'buttonStyles', 'text', e.target.value)} className="w-20 text-xs border border-slate-200 rounded px-1 py-1" title="버튼 텍스트" />
                                                             <input type="color" value={el.buttonStyles.backgroundColor} onChange={(e) => updateElementProps(container.id, column.id, el.id, 'buttonStyles', 'backgroundColor', e.target.value)} className="w-5 h-5 cursor-pointer" title="버튼 배경색" />
-
                                                             <div className="w-px h-4 bg-slate-300" />
-
                                                             <div className="flex items-center gap-1" title="버튼 클릭 시 이동할 URL">
                                                                 <LinkIcon size={14} className="text-slate-400" />
                                                                 <input
@@ -735,12 +663,10 @@ export default function ContainerBoard({
                                                                     className="w-36 text-xs border border-slate-200 rounded px-1.5 py-1 outline-none focus:border-indigo-500"
                                                                 />
                                                             </div>
-
                                                             <div className="w-px h-4 bg-slate-300" />
                                                             <button onClick={() => deleteElement(container.id, column.id, el.id)} className="text-slate-500 hover:text-red-500"><Trash2 size={16} /></button>
                                                         </div>
                                                     )}
-
                                                     <a
                                                         href={(el.buttonStyles as any).linkUrl || "#"}
                                                         onClick={(e) => e.preventDefault()}
@@ -789,7 +715,6 @@ export default function ContainerBoard({
                                                                 <Wand2 size={14} /> 애니
                                                             </button>
                                                             <div className="w-px h-4 bg-slate-300" />
-
                                                             {selectedCells.size > 1 && (
                                                                 <button onClick={() => mergeCells(container.id, column.id, el.id, el.tableData!)} className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800">
                                                                     <Merge size={14} /> 병합
@@ -839,8 +764,10 @@ export default function ContainerBoard({
                                                                         const newCells = { ...el.tableData!.cells };
                                                                         selectedCells.forEach(cellKey => {
                                                                             if (newCells[cellKey]) {
-                                                                                newCells[cellKey].content = `<img src="${fileUrl}" alt="table-img" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />`;
-                                                                                newCells[cellKey].file = file
+                                                                                // 💡 [수정] 텍스트 덮어쓰기 방지 및 file 속성 할당 제거 (VisualPageBuilder가 처리)
+                                                                                const currentContent = newCells[cellKey].content || "";
+                                                                                const br = currentContent ? '<br>' : '';
+                                                                                newCells[cellKey].content = `${currentContent}${br}<img src="${fileUrl}" alt="table-img" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />`;
                                                                             }
                                                                         });
                                                                         updateElementProps(container.id, column.id, el.id, 'tableData', 'cells', newCells);
@@ -915,7 +842,7 @@ export default function ContainerBoard({
                                                                                     contentEditable
                                                                                     suppressContentEditableWarning
                                                                                     className="outline-none min-h-[20px] cursor-text"
-                                                                                    onClick={(e) => handleInlineImgClick(e, el.id, cellKey)} // 💡 테이블 내 인라인 이미지 감지
+                                                                                    onClick={(e) => handleInlineImgClick(e, el.id, cellKey)}
                                                                                     onMouseDown={(e) => {
                                                                                         e.stopPropagation();
                                                                                         setActiveElementId(el.id);
@@ -945,7 +872,6 @@ export default function ContainerBoard({
                                                 <div className="w-full relative ml-4" onMouseDown={(e) => { e.stopPropagation(); setActiveElementId(el.id); }}>
                                                     {isActive && (
                                                         <div className="absolute -top-16 left-0 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-2 flex items-center gap-2 z-50 whitespace-nowrap overflow-x-auto element-toolbar">
-
                                                             <button
                                                                 onMouseDown={(e) => toggleHtmlMode(e, el.id)}
                                                                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors ${htmlModeElements[el.id] ? 'bg-slate-800 text-green-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
@@ -954,12 +880,10 @@ export default function ContainerBoard({
                                                                 <Code size={14} /> HTML
                                                             </button>
                                                             <div className="w-px h-4 bg-slate-300" />
-
                                                             <button onMouseDown={(e) => { e.preventDefault(); openAnimModal(el, 'element', container.id, column.id); }} className="flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600" title="애니메이션 효과">
                                                                 <Wand2 size={14} /> 애니
                                                             </button>
                                                             <div className="w-px h-4 bg-slate-300" />
-
                                                             <button onClick={() => updateElementProps(container.id, column.id, el.id, 'cardData', 'layout', el.cardData!.layout === 'row' ? 'col' : 'row')} className="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded font-bold text-slate-700">
                                                                 {el.cardData.layout === 'row' ? '좌우 모드' : '위아래 모드'}
                                                             </button>
@@ -1009,9 +933,7 @@ export default function ContainerBoard({
                                                                     onChange={(e) => {
                                                                         const val = Number(e.target.value);
                                                                         const isApplied = applyStyleToSelection('fontSize', val);
-                                                                        if (!isApplied) {
-                                                                            updateElementStyle(container.id, column.id, el.id, "fontSize", val);
-                                                                        }
+                                                                        if (!isApplied) updateElementStyle(container.id, column.id, el.id, "fontSize", val);
                                                                     }}
                                                                     className="w-12 text-center text-xs font-bold border border-slate-200 rounded outline-none py-1"
                                                                 />
@@ -1083,7 +1005,7 @@ export default function ContainerBoard({
                                                                     id={`editable-${el.id}`}
                                                                     contentEditable
                                                                     suppressContentEditableWarning
-                                                                    onClick={(e) => handleInlineImgClick(e, el.id)} // 💡 인라인 이미지 클릭 감지
+                                                                    onClick={(e) => handleInlineImgClick(e, el.id)}
                                                                     onMouseUp={handleSelection}
                                                                     onKeyUp={handleSelection}
                                                                     style={{
@@ -1143,7 +1065,6 @@ export default function ContainerBoard({
             </div>
 
             {/* 💡 HTML 본문 안에 있는 이미지를 눌렀을 때 나타나는 독립된 툴바 */}
-            {/* 💡 HTML 본문 안에 있는 이미지를 눌렀을 때 나타나는 독립된 툴바 */}
             {selectedInlineImg && (
                 <div
                     className="fixed z-[9999] flex items-center gap-2 bg-white rounded shadow-2xl border border-slate-300 p-1.5 inline-img-toolbar"
@@ -1176,7 +1097,7 @@ export default function ContainerBoard({
                                                     ...col,
                                                     elements: col.elements.map(el => {
                                                         if (el.id === elId) {
-                                                            // 💡 DOMParser 대신 가상 div를 사용하여 style 태그 유실 방지
+                                                            // 💡 [수정] 다중 파일 처리를 위해 file: file 속성 부여를 제거했습니다.
                                                             if (cellKey && el.tableData) {
                                                                 const newCells = { ...el.tableData.cells };
                                                                 if (newCells[cellKey]) {
@@ -1187,19 +1108,17 @@ export default function ContainerBoard({
                                                                     if (targetImg) {
                                                                         targetImg.setAttribute('src', newImageUrl);
                                                                         newCells[cellKey].content = tempDiv.innerHTML;
-                                                                        newCells[cellKey].file = file;
                                                                     }
                                                                 }
                                                                 return { ...el, tableData: { ...el.tableData, cells: newCells } };
-                                                            }
-                                                            else {
+                                                            } else {
                                                                 const tempDiv = document.createElement('div');
                                                                 tempDiv.innerHTML = el.content;
                                                                 const imgs = Array.from(tempDiv.querySelectorAll('img'));
                                                                 const targetImg = imgs.find(img => img.src === oldSrc) || imgs[0];
                                                                 if (targetImg) {
                                                                     targetImg.setAttribute('src', newImageUrl);
-                                                                    return { ...el, content: tempDiv.innerHTML, file: file };
+                                                                    return { ...el, content: tempDiv.innerHTML };
                                                                 }
                                                             }
                                                         }
@@ -1207,7 +1126,6 @@ export default function ContainerBoard({
                                                     })
                                                 }))
                                             })));
-
                                             setSelectedInlineImg(null);
                                         }
                                     };
@@ -1227,7 +1145,6 @@ export default function ContainerBoard({
                                     ...col,
                                     elements: col.elements.map(el => {
                                         if (el.id === elId) {
-                                            // 💡 삭제 로직에도 가상 div 방식 적용
                                             if (cellKey && el.tableData) {
                                                 const newCells = { ...el.tableData.cells };
                                                 if (newCells[cellKey]) {
@@ -1252,7 +1169,6 @@ export default function ContainerBoard({
                                     })
                                 }))
                             })));
-
                             setSelectedInlineImg(null);
                         }}
                         className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 text-xs font-bold transition-colors shadow"

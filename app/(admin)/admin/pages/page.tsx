@@ -200,69 +200,152 @@ export default function VisualPageBuilder() {
     };
 
     const handleSave = async () => {
-        if (!title.trim()) return alert("페이지 제목을 입력해주세요.");
-        setIsSaving(true);
-        const formData = new FormData();
-        formData.append("menuId", selectedMenuId === "0" ? "" : selectedMenuId);
-        formData.append("title", title);
+    if (!title.trim()) return alert("페이지 제목을 입력해주세요.");
+    setIsSaving(true);
+    const formData = new FormData();
+    formData.append("menuId", selectedMenuId === "0" ? "" : selectedMenuId);
+    formData.append("title", title);
 
-        const cleanSlides = slides.map(s => { const { file, ...rest } = s; return rest; });
-        const cleanContainers = containers.map(c => ({
+    let assetIndex = 0; // 💡 HTML 내 다중 이미지를 구별할 고유 인덱스
+
+    // 💡 HTML 내부의 다중 이미지를 개별 파일로 추출하기 위해 Promise.all 비동기 처리 적용
+    const cleanContainers = await Promise.all(
+        containers.map(async (c) => ({
             ...c,
-            columns: c.columns.map(col => ({
-                ...col,
-                elements: col.elements.map(el => {
-                    const { file, ...restEl } = el;
-                    const editableDiv = document.getElementById(`editable-${el.id}`);
-                    if (editableDiv) restEl.content = editableDiv.innerHTML;
-                    if (restEl.type === 'TABLE' && restEl.tableData) {
-                        const cleanCells: Record<string, any> = {};
-                        Object.keys(restEl.tableData.cells).forEach(k => {
-                            const { file: cellFile, ...restCell } = restEl.tableData!.cells[k];
-                            cleanCells[k] = restCell;
-                        });
-                        restEl.tableData = { ...restEl.tableData, cells: cleanCells as any };
-                    }
-                    return restEl;
-                })
-            }))
-        }));
+            columns: await Promise.all(
+                c.columns.map(async (col) => ({
+                    ...col,
+                    elements: await Promise.all(
+                        col.elements.map(async (el) => {
+                            const { file, ...restEl } = el;
+                            const editableDiv = document.getElementById(`editable-${el.id}`);
+                            
+                            if (editableDiv) {
+                                let htmlContent = editableDiv.innerHTML;
+                                
+                                // 1. HTML 안의 모든 base64, blob 이미지를 검색
+                                const imgRegex = /src="(data:image\/[^;]+;base64,[^"]+|blob:[^"]+)"/g;
+                                const matches: string[] = [];
+                                let match;
+                                while ((match = imgRegex.exec(htmlContent)) !== null) {
+                                    matches.push(match[1]);
+                                }
 
-        formData.append("sliderData", JSON.stringify(cleanSlides));
-        formData.append("contentBlocks", JSON.stringify(cleanContainers));
-        formData.append("pageMeta", JSON.stringify(pageMeta));
-        if (metaBgFile) formData.append("meta_bg_file", metaBgFile);
+                                // 2. 찾아낸 각각의 이미지를 File 객체로 변환하고 formData에 독립적으로 추가
+                                for (const src of matches) {
+                                    try {
+                                        let imageFile: File | Blob | null = null;
+                                        if (src.startsWith('data:')) {
+                                            const arr = src.split(',');
+                                            const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+                                            const bstr = atob(arr[1]);
+                                            let n = bstr.length;
+                                            const u8arr = new Uint8Array(n);
+                                            while (n--) u8arr[n] = bstr.charCodeAt(n);
+                                            imageFile = new File([u8arr], `asset_${assetIndex}.png`, { type: mime });
+                                        } else if (src.startsWith('blob:')) {
+                                            const res = await fetch(src);
+                                            imageFile = await res.blob();
+                                        }
 
-        slides.forEach((slide, idx) => { if (slide.file) formData.append(`slide_file_${idx}`, slide.file); });
-        containers.forEach(container => {
-            container.columns.forEach(col => {
-                col.elements.forEach(el => {
-                    if (el.file) formData.append(`element_file_${el.id}`, el.file);
-                    if (el.type === 'TABLE' && el.tableData) {
-                        Object.keys(el.tableData.cells).forEach(cellKey => {
-                            if (el.tableData!.cells[cellKey].file) formData.append(`table_file_${el.id}_${cellKey}`, el.tableData!.cells[cellKey].file);
-                        });
-                    }
-                });
+                                        if (imageFile) {
+                                            // 프론트엔드에서는 임시 토큰으로 치환
+                                            const token = `__S3_ASSET_${assetIndex}__`;
+                                            formData.append(`asset_file_${assetIndex}`, imageFile as Blob, `asset_${assetIndex}.png`);
+                                            htmlContent = htmlContent.replace(src, token);
+                                            assetIndex++;
+                                        }
+                                    } catch (e) {
+                                        console.error("Image extract error:", e);
+                                    }
+                                }
+                                restEl.content = htmlContent;
+                            }
+
+                            // TABLE 데이터 내부 셀의 이미지도 동일하게 다중 처리
+                            if (restEl.type === 'TABLE' && restEl.tableData) {
+                                const cleanCells: Record<string, any> = {};
+                                for (const k of Object.keys(restEl.tableData.cells)) {
+                                    const { file: cellFile, ...restCell } = restEl.tableData!.cells[k];
+                                    let cellContent = restCell.content;
+                                    
+                                    const imgRegex = /src="(data:image\/[^;]+;base64,[^"]+|blob:[^"]+)"/g;
+                                    const matches: string[] = [];
+                                    let match;
+                                    while ((match = imgRegex.exec(cellContent)) !== null) {
+                                        matches.push(match[1]);
+                                    }
+
+                                    for (const src of matches) {
+                                        try {
+                                            let imageFile: File | Blob | null = null;
+                                            if (src.startsWith('data:')) {
+                                                const arr = src.split(',');
+                                                const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+                                                const bstr = atob(arr[1]);
+                                                let n = bstr.length;
+                                                const u8arr = new Uint8Array(n);
+                                                while (n--) u8arr[n] = bstr.charCodeAt(n);
+                                                imageFile = new File([u8arr], `asset_${assetIndex}.png`, { type: mime });
+                                            } else if (src.startsWith('blob:')) {
+                                                const res = await fetch(src);
+                                                imageFile = await res.blob();
+                                            }
+
+                                            if (imageFile) {
+                                                const token = `__S3_ASSET_${assetIndex}__`;
+                                                formData.append(`asset_file_${assetIndex}`, imageFile as Blob, `asset_${assetIndex}.png`);
+                                                cellContent = cellContent.replace(src, token);
+                                                assetIndex++;
+                                            }
+                                        } catch (e) {
+                                            console.error("Image extract error:", e);
+                                        }
+                                    }
+                                    restCell.content = cellContent;
+                                    cleanCells[k] = restCell;
+                                }
+                                restEl.tableData = { ...restEl.tableData, cells: cleanCells as any };
+                            }
+                            return restEl;
+                        }) // 💡 col.elements.map 종료
+                    ) // 💡 elements Promise.all 종료
+                })) // 💡 c.columns.map 종료
+            ) // 💡 columns Promise.all 종료
+        })) // 💡 containers.map 종료
+    ); // 💡 최상단 Promise.all 종료
+
+    const cleanSlides = slides.map(s => { const { file, ...rest } = s; return rest; });
+    formData.append("sliderData", JSON.stringify(cleanSlides));
+    formData.append("contentBlocks", JSON.stringify(cleanContainers));
+    formData.append("pageMeta", JSON.stringify(pageMeta));
+    if (metaBgFile) formData.append("meta_bg_file", metaBgFile);
+
+    slides.forEach((slide, idx) => { if (slide.file) formData.append(`slide_file_${idx}`, slide.file); });
+    containers.forEach(container => {
+        container.columns.forEach(col => {
+            col.elements.forEach(el => {
+                // IMAGE 타입 엘리먼트 등의 단일 파일을 위한 로직 유지
+                if (el.file) formData.append(`element_file_${el.id}`, el.file);
             });
         });
+    });
 
-        try {
-            const url = pageId ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/${pageId}` : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages`;
-            const res = await fetch(url, { method: pageId ? "PUT" : "POST", body: formData });
-            const json = await res.json();
-            if (json.success) {
-                alert(pageId ? "수정되었습니다." : "생성되었습니다.");
-                await loadPageData(selectedMenuId);
-            } else alert("저장 실패: " + json.message);
-        } catch (error) {
-            console.log(error);
-            alert("서버와 통신 중 오류가 발생했습니다.");
-        } finally {
-            // 💡 [추가] 저장이 끝났으므로(성공/실패 무관) 상태 해제
-            setIsSaving(false);
-        }
-    };
+    try {
+        const url = pageId ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages/${pageId}` : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/pages`;
+        const res = await fetch(url, { method: pageId ? "PUT" : "POST", body: formData });
+        const json = await res.json();
+        if (json.success) {
+            alert(pageId ? "수정되었습니다." : "생성되었습니다.");
+            await loadPageData(selectedMenuId);
+        } else alert("저장 실패: " + json.message);
+    } catch (error) {
+        console.log(error);
+        alert("서버와 통신 중 오류가 발생했습니다.");
+    } finally {
+        setIsSaving(false);
+    }
+};
 
     const handleGenerateAI = async () => {
         if (!aiPrompt.trim()) return alert("원하시는 형태를 프롬프트로 입력해주세요.");
