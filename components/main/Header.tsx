@@ -101,7 +101,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
             </button>
           )}
 
-          <a href="/support" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
+          <a href="/support/boards/notice" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
             고객지원
           </a>
           <a href="/contact" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
@@ -295,7 +295,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
               
               <div className="grid grid-cols-2 gap-2 mb-2">
                 <a
-                  href="/support"
+                  href="/support/boards/notice"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="py-2.5 text-center text-sm font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
                 >
@@ -339,7 +339,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
               <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3 bg-slate-50 dark:bg-slate-800/30 mt-auto">
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <a
-                    href="/support"
+                    href="/support/boards/notice"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="py-2.5 text-center text-sm font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
                   >

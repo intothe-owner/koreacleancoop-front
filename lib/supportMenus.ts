@@ -4,5 +4,5 @@ export const SUPPORT_TABS = [
   { name: "자주묻는질문", url: "/support/boards/faq" },
   { name: "상담/견적문의", url: "/support/boards/inquiry" },
   { name: "전체 갤러리", url: "/support/boards/gallery" },
-  { name: "자료실", url: "/support/boards/archive" },
+  { name: "자료실", url: "/support/boards/data" },
 ];

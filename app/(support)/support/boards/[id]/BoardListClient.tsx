@@ -98,7 +98,7 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
               </button>
             </form>
             {userLevel >= boardConfig.writeLevel && (
-              <Link href={`/boards/${boardId}/write`} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm shrink-0 flex items-center justify-center">
+              <Link href={`/support/boards/${boardId}/write`} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm shrink-0 flex items-center justify-center">
                 글쓰기
               </Link>
             )}
