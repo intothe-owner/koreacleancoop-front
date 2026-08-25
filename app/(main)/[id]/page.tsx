@@ -65,7 +65,7 @@ export default function SubPage() {
       {!hasSlider && meta.bgImage && (
         <div className="relative w-full h-[400px] flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${meta.bgImage})` }}>
           <div className="absolute inset-0 bg-black/40"></div>
-          <h1 className="relative z-10 text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mt-90">
+          <h1 className="relative z-10 text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mt-30">
             {meta.bgTitle || pageData.title}
           </h1>
         </div>
