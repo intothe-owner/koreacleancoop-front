@@ -43,7 +43,7 @@ export default function PostWriteClient({ boardId }: { boardId: string }) {
         if (json.success) {
           if (currentLevel < json.data.writeLevel) {
             alert('글쓰기 권한이 없습니다.');
-            router.push(`/boards/${boardId}`);
+            router.push(`/support/boards/${boardId}`);
             return;
           }
           setBoardConfig(json.data);
@@ -85,7 +85,7 @@ export default function PostWriteClient({ boardId }: { boardId: string }) {
         body: formData,
       });
       if (res.ok) {
-        router.push(`/boards/${boardId}`);
+        router.push(`/support/boards/${boardId}`);
         router.refresh();
       } else {
         const err = await res.json();

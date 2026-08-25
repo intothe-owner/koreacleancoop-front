@@ -43,7 +43,7 @@ export default function PostActionButtons({ boardId, postId, boardConfig }: { bo
       // 💡 삭제 후 목록 캐시 만료 처리
       queryClient.invalidateQueries({ queryKey: ['boardPosts', boardId] });
       alert('게시글이 삭제되었습니다.');
-      router.push(`/boards/${boardId}`);
+      router.push(`/support/boards/${boardId}`);
       router.refresh();
     },
     onError: (error: any) => {
@@ -61,7 +61,7 @@ export default function PostActionButtons({ boardId, postId, boardConfig }: { bo
   return (
     <div className="flex gap-2">
       {userLevel >= boardConfig?.writeLevel && (
-        <Link href={`/boards/${boardId}/${postId}/edit`} className="px-5 py-2.5 font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors">
+        <Link href={`/support/boards/${boardId}/${postId}/edit`} className="px-5 py-2.5 font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors">
           수정
         </Link>
       )}

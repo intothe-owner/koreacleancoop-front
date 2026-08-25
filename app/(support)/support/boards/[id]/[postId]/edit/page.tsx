@@ -67,7 +67,7 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['postDetail', postId] });
       queryClient.invalidateQueries({ queryKey: ['boardPosts', boardId] });
-      router.push(`/boards/${boardId}/${postId}`);
+      router.push(`/support/boards/${boardId}/${postId}`);
       router.refresh();
     },
     onError: (error: any) => {

@@ -67,7 +67,7 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
     onSuccess: () => {
       // 💡 게시글 목록 캐시 무효화로 최신화
       queryClient.invalidateQueries({ queryKey: ['boardPosts', boardId] });
-      router.push(`/boards/${boardId}`);
+      router.push(`/support/boards/${boardId}`);
       router.refresh();
     },
     onError: (error: any) => {

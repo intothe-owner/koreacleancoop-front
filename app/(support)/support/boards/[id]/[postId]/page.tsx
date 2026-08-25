@@ -45,7 +45,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <div className="w-full flex justify-center pt-32">
         <div className="text-center bg-slate-50 p-12 rounded-2xl border border-slate-200">
           <p className="text-xl font-bold text-slate-700 mb-4">게시글을 찾을 수 없습니다.</p>
-          <Link href={`/boards/${boardId}`} className="text-blue-600 font-medium hover:underline">목록으로 돌아가기</Link>
+          <Link href={`/support/boards/${boardId}`} className="text-blue-600 font-medium hover:underline">목록으로 돌아가기</Link>
         </div>
       </div>
     );
@@ -83,7 +83,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         </article>
 
         <div className="flex justify-between items-center mt-8">
-          <Link href={`/boards/${boardId}`} className="px-6 py-2.5 font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-sm transition-colors">
+          <Link href={`/support/boards/${boardId}`} className="px-6 py-2.5 font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-sm transition-colors">
             목록으로
           </Link>
           <PostActionButtons boardId={boardId} postId={postId} boardConfig={boardConfig}/>
