@@ -24,7 +24,7 @@ export default function SlideManager({
 }: SlideManagerProps) {
     return (
         <div className="mb-8 p-6 bg-indigo-50/50 border border-indigo-200 rounded-2xl shadow-sm space-y-4">
-            
+
             <div className="flex items-center justify-between border-b border-indigo-100 pb-3">
                 <h3 className="text-lg font-bold text-indigo-900 flex items-center gap-2">
                     {sliderType === "header" ? <LayoutPanelTop size={20} className="text-indigo-600" /> : <Film size={20} className="text-indigo-600" />}
@@ -40,10 +40,10 @@ export default function SlideManager({
 
                             // 헤더나 사용 안 함을 선택하면 기존 슬라이드 데이터 비우기
                             if (type === "none" || type === "header") {
-                                setSlides([]); 
+                                setSlides([]);
                             } else {
-                                const updatedSlides = slides.length > 0 
-                                    ? slides.map(slide => ({ ...slide, type: type })) 
+                                const updatedSlides = slides.length > 0
+                                    ? slides.map(slide => ({ ...slide, type: type }))
                                     : [{ ...defaultSlide, type: type }];
                                 setSlides(updatedSlides);
                             }
@@ -175,7 +175,7 @@ export default function SlideManager({
                                                 key={`slide-title-${idx}`}
                                                 contentEditable
                                                 suppressContentEditableWarning
-                                                onMouseDown={(e) => {
+                                                onFocus={(e) => {
                                                     e.stopPropagation();
                                                     if (!isTitleActive) setActiveSlideFocus({ index: idx, field: 'title' });
                                                 }}
@@ -241,9 +241,9 @@ export default function SlideManager({
                                             <div
                                                 contentEditable
                                                 suppressContentEditableWarning
-                                                onMouseDown={(e) => {
+                                                onFocus={(e) => {
                                                     e.stopPropagation();
-                                                    if (!isDescActive) setActiveSlideFocus({ index: idx, field: 'desc' });
+                                                    if (!isTitleActive) setActiveSlideFocus({ index: idx, field: 'title' });
                                                 }}
                                                 onBlur={(e) => {
                                                     const updated = [...slides];
@@ -277,7 +277,7 @@ export default function SlideManager({
                             }])}
                             className="w-full py-2.5 border-2 border-dashed border-indigo-300 text-indigo-600 bg-white hover:bg-indigo-50/50 rounded-xl font-bold text-sm transition flex items-center justify-center gap-1.5"
                         >
-                            <Plus size={16} /> 
+                            <Plus size={16} />
                             {sliderType === "video" ? "동영상" : "이미지"} 슬라이드 추가 ({slides.length}/5)
                         </button>
                     )}
@@ -299,11 +299,11 @@ export default function SlideManager({
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">상단 배경 이미지</label>
-                        
+
                         {pageMeta.bgImage ? (
                             <div className="relative group rounded-lg overflow-hidden border border-slate-200 w-full h-24 bg-slate-100">
                                 <img src={pageMeta.bgImage} className="w-full h-full object-cover" alt="배경" />
-                                
+
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-2">
                                     <label className="flex items-center gap-1 bg-white text-slate-800 px-3 py-1.5 rounded text-xs font-bold cursor-pointer shadow hover:bg-slate-100">
                                         <ImagePlus size={14} /> 첨부
@@ -314,11 +314,11 @@ export default function SlideManager({
                                             }
                                         }} className="hidden" />
                                     </label>
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             setMetaBgFile(null);
                                             setPageMeta({ ...pageMeta, bgImage: '' });
-                                        }} 
+                                        }}
                                         className="bg-red-500 text-white px-3 py-1.5 rounded text-xs font-bold shadow hover:bg-red-600"
                                     >
                                         삭제
@@ -327,7 +327,7 @@ export default function SlideManager({
                             </div>
                         ) : (
                             <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 hover:border-indigo-400 transition bg-white">
-                                <span className="text-sm font-bold text-slate-500 flex items-center gap-2"><ImagePlus size={18}/> 이미지 첨부하기</span>
+                                <span className="text-sm font-bold text-slate-500 flex items-center gap-2"><ImagePlus size={18} /> 이미지 첨부하기</span>
                                 <input type="file" accept="image/*" onChange={(e) => {
                                     if (e.target.files?.[0]) {
                                         setMetaBgFile(e.target.files[0]);
