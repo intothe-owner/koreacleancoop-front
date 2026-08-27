@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import ExecutableHtml from "./ExecutableHtml";
 
 interface AnimationConfig {
   type: "none" | "fadeIn" | "slideUp" | "slideDown" | "slideLeft" | "slideRight" | "zoomIn";
@@ -149,22 +150,7 @@ export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
                   
                   {/* 1. 텍스트 엘리먼트 */}
                   {el.type === "TEXT" && (
-                    <div
-                      style={{
-                        fontSize: `${el.styles?.fontSize || 16}px`,
-                        color: adaptColorForDarkMode(el.styles?.color),
-                        textAlign: el.styles?.textAlign || "left",
-                        fontFamily: el.styles?.fontFamily !== "default" ? el.styles?.fontFamily : "inherit",
-                        width: el.styles?.width === "auto" ? "100%" : `${el.styles?.width}px`,
-                        height: el.styles?.height === "auto" ? "auto" : `${el.styles?.height}px`,
-                        fontWeight: el.styles?.fontWeight || "normal",
-                        fontStyle: el.styles?.fontStyle || "normal",
-                        textDecoration: el.styles?.textDecoration || "none",
-                      }}
-                      dangerouslySetInnerHTML={{ __html: el.content }}
-                      // dangerouslySetInnerHTML={{ __html: cleanHtmlForTheme(el.content) }}
-                      className="whitespace-pre-wrap break-words prose prose-slate dark:prose-invert max-w-none w-full"
-                    />
+                    <ExecutableHtml html={el.content} el={el} adaptColorForDarkMode={adaptColorForDarkMode} />
                   )}
 
                   {/* 2. 이미지 엘리먼트 */}

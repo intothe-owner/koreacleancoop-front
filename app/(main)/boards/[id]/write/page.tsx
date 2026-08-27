@@ -1,4 +1,4 @@
-// src/app/(main)/boards/[id]/write/page.tsx (또는 PostWriteClient.tsx)
+// src/app/(main)/boards/[id]/write/page.tsx
 'use client';
 
 import { useState, use, useEffect, useRef } from 'react';
@@ -24,6 +24,26 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 💡 [추가] 캡차 관련 상태
+  const [captchaSvg, setCaptchaSvg] = useState<string>('');
+  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [captchaInput, setCaptchaInput] = useState<string>('');
+
+  // 💡 [추가] 캡차 불러오기 함수
+  const loadCaptcha = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/boards/captcha`);
+      const data = await res.json();
+      if (data.success) {
+        setCaptchaSvg(data.svg);
+        setCaptchaToken(data.token);
+        setCaptchaInput(''); // 입력창 초기화
+      }
+    } catch (error) {
+      console.error("캡차를 불러오지 못했습니다.", error);
+    }
+  };
+
   useEffect(() => {
     const userStr = localStorage.getItem('user');
     let currentLevel = 1;
@@ -33,6 +53,9 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
       currentLevel = user.level;
       setIsLoggedIn(true);
       setUserData(user);
+    } else {
+      // 💡 [추가] 비회원일 경우 컴포넌트 마운트 시 캡차 로드
+      loadCaptcha();
     }
 
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/board-configs/${boardId}`)
@@ -65,13 +88,16 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
       return res.json();
     },
     onSuccess: () => {
-      // 💡 게시글 목록 캐시 무효화로 최신화
       queryClient.invalidateQueries({ queryKey: ['boardPosts', boardId] });
       router.push(`/boards/${boardId}`);
       router.refresh();
     },
     onError: (error: any) => {
       alert(error.message || '서버 오류가 발생했습니다.');
+      // 💡 [추가] 서버에서 캡차가 틀렸다고 에러를 보냈을 경우 캡차 새로고침
+      if (!isLoggedIn && error.message?.includes('자동등록방지')) {
+        loadCaptcha();
+      }
     }
   });
 
@@ -154,7 +180,18 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
     files.forEach(file => { if (file) formData.append('attachments', file); });
     
     if (Object.keys(extraData).length > 0) formData.append('extraData', JSON.stringify(extraData));
-    if (isLoggedIn && userData) formData.append('memberId', userData.id);
+    
+    // 💡 [수정] 캡차 데이터 Append
+    if (isLoggedIn && userData) {
+      formData.append('memberId', userData.id);
+    } else {
+      if (!captchaInput.trim()) {
+        alert('자동등록방지 문자를 입력해주세요.');
+        return;
+      }
+      formData.append('captchaInput', captchaInput);
+      formData.append('captchaToken', captchaToken);
+    }
 
     writeMutation.mutate(formData);
   };
@@ -191,6 +228,41 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700">비밀번호 *</label>
                     <input type="password" name="password" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                  </div>
+                  
+                  {/* 💡 [추가] 비회원 캡차 입력 영역 */}
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-slate-700">자동등록방지 (Captcha) *</label>
+                    <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      {captchaSvg ? (
+                        <div 
+                          className="cursor-pointer bg-white border border-slate-200 rounded-lg overflow-hidden flex-shrink-0" 
+                          onClick={loadCaptcha}
+                          title="클릭하여 새로고침"
+                          dangerouslySetInnerHTML={{ __html: captchaSvg }} 
+                        />
+                      ) : (
+                        <div className="w-[120px] h-[40px] flex items-center justify-center bg-white border border-slate-200 rounded-lg text-sm text-slate-500">
+                          로딩중...
+                        </div>
+                      )}
+                      <input 
+                        type="text" 
+                        value={captchaInput}
+                        onChange={(e) => setCaptchaInput(e.target.value)}
+                        placeholder="왼쪽 문자 입력" 
+                        required={!isLoggedIn}
+                        className="flex-1 min-w-[150px] px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                      <button 
+                        type="button" 
+                        onClick={loadCaptcha}
+                        className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors"
+                        title="새로고침"
+                      >
+                        ↻
+                      </button>
+                    </div>
                   </div>
                 </>
               ) : (
