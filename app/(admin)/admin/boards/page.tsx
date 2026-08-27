@@ -350,6 +350,7 @@ export default function BoardConfigManager() {
                         <select value={field.inputType} onChange={(e) => handleExtraFieldChange(index, "inputType", e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-indigo-500">
                           <option value="text">텍스트 (Text)</option>
                           <option value="number">숫자 (Number)</option>
+                          <option value="date">날짜</option>
                           <option value="url">링크 (URL)</option>
                           <option value="email">이메일 (Email)</option>
                           <option value="radio">라디오 (Radio)</option>
