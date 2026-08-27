@@ -54,6 +54,16 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const mediaUrls: string[] = typeof post.mediaUrls === 'string' ? JSON.parse(post.mediaUrls) : (post.mediaUrls || []);
   const hasFiles = boardConfig?.useEditor ? mediaUrls.length > 0 : mediaUrls.some((url: string) => !isImage(url) && !isVideo(url));
   const extraFields = boardConfig?.extraFields || [];
+  const extraData = typeof post.extraData === 'string'
+    ? (() => { try { return JSON.parse(post.extraData); } catch { return {}; } })()
+    : (post.extraData || {});
+
+  const formatExtraValue = (field: any) => {
+    const value = extraData[field.fieldName];
+    if (Array.isArray(value)) return value.join(', ');
+    if (value === null || value === undefined || value === '') return '-';
+    return String(value);
+  };
 
   return (
     <div className="w-full flex flex-col pt-24 pb-24">
@@ -72,6 +82,17 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               <span>조회 {post.hitCount}</span>
             </div>
           </header>
+
+          {boardConfig?.useExtraFields && extraFields.length > 0 && (
+            <dl className="grid grid-cols-1 md:grid-cols-2 border-b border-slate-100 bg-slate-50/50">
+              {extraFields.map((field: any, index: number) => (
+                <div key={`${field.fieldName}-${index}`} className="grid grid-cols-[120px_1fr] gap-4 px-6 py-4 md:px-10 border-b border-slate-100 last:border-b-0 md:[&:nth-last-child(-n+2)]:border-b-0">
+                  <dt className="text-sm font-bold text-slate-600">{field.fieldName}</dt>
+                  <dd className="text-sm text-slate-900 break-words">{formatExtraValue(field)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
 
           <div className="px-6 py-8 md:px-10 md:py-12">
             {boardConfig?.useEditor ? (

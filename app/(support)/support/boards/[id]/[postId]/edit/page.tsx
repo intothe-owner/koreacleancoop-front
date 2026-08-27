@@ -44,7 +44,13 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
           content: post.content || '', 
           category: post.category || '' 
         });
-        if (post.extraData) setExtraData(post.extraData);
+        if (post.extraData) {
+          if (typeof post.extraData === 'string') {
+            try { setExtraData(JSON.parse(post.extraData)); } catch { setExtraData({}); }
+          } else {
+            setExtraData(post.extraData);
+          }
+        }
         if (post.mediaUrls) setExistingFiles(typeof post.mediaUrls === 'string' ? JSON.parse(post.mediaUrls) : post.mediaUrls);
       }
     });
@@ -78,6 +84,13 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckboxChange = (fieldName: string, option: string, checked: boolean) => {
+    setExtraData(prev => {
+      const current = Array.isArray(prev[fieldName]) ? prev[fieldName] : [];
+      return { ...prev, [fieldName]: checked ? [...current, option] : current.filter((item: string) => item !== option) };
+    });
   };
 
   const handleEditorImageAttach = (file: File, id: string) => {
@@ -147,6 +160,7 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
   if (!boardConfig) return <div className="w-full text-center pt-32 text-slate-500 font-medium">로딩 중...</div>;
 
   const categories = boardConfig.categories ? boardConfig.categories.split(',').map((c: string) => c.trim()) : [];
+  const extraFields = boardConfig.extraFields || [];
 
   return (
     <div className="w-full flex flex-col pt-24 pb-24 bg-slate-50/50 min-h-screen">
@@ -193,6 +207,26 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
                 <textarea name="content" value={formData.content} required rows={12} onChange={handleChange} className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 resize-none leading-relaxed" />
               )}
             </div>
+
+            {boardConfig.useExtraFields && extraFields.length > 0 && (
+              <div className="p-6 bg-slate-50/50 border border-slate-200 rounded-xl space-y-6">
+                <h3 className="font-bold text-slate-800 text-sm border-b border-slate-200 pb-2">추가 정보 수정</h3>
+                {extraFields.map((field: any, index: number) => (
+                  <div key={`${field.fieldName}-${index}`} className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">{field.fieldName}</label>
+                    {['text', 'number', 'url', 'email', 'date'].includes(field.inputType) ? (
+                      <input type={field.inputType} value={extraData[field.fieldName] ?? ''} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500" />
+                    ) : field.inputType === 'select' ? (
+                      <select value={extraData[field.fieldName] ?? ''} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500"><option value="">선택하세요</option>{field.options?.split(',').map((opt: string) => <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>)}</select>
+                    ) : field.inputType === 'radio' ? (
+                      <div className="flex flex-wrap gap-4 pt-1">{field.options?.split(',').map((opt: string) => { const value = opt.trim(); return <label key={value} className="flex items-center gap-2 cursor-pointer text-sm"><input type="radio" name={`extra-${field.fieldName}`} value={value} checked={extraData[field.fieldName] === value} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-4 h-4 text-blue-600" />{value}</label>; })}</div>
+                    ) : field.inputType === 'checkbox' ? (
+                      <div className="flex flex-wrap gap-4 pt-1">{field.options?.split(',').map((opt: string) => { const value = opt.trim(); return <label key={value} className="flex items-center gap-2 cursor-pointer text-sm"><input type="checkbox" value={value} checked={(Array.isArray(extraData[field.fieldName]) ? extraData[field.fieldName] : []).includes(value)} onChange={(e) => handleCheckboxChange(field.fieldName, value, e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />{value}</label>; })}</div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
               <button type="button" onClick={() => router.back()} className="px-6 py-3 font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">취소</button>

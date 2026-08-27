@@ -149,6 +149,15 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
     setFiles(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
+  const handleCheckboxChange = (name: string, value: string, checked: boolean) => {
+    setExtraData(prev => {
+      const current = prev[name] || [];
+      if (checked) return { ...prev, [name]: [...current, value] };
+      else return { ...prev, [name]: current.filter((v: string) => v !== value) };
+    });
+  };
+
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -199,7 +208,7 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
   if (!boardConfig) return <div className="w-full text-center pt-32 text-slate-500 font-medium">로딩 중...</div>;
 
   const categories = boardConfig.categories ? boardConfig.categories.split(',').map((c: string) => c.trim()) : [];
-  
+  const extraFields = boardConfig.extraFields || [];
   return (
     <div className="w-full flex flex-col pt-24 pb-24 bg-slate-50/50 min-h-screen">
       <div className="max-w-4xl mx-auto px-4 w-full">
@@ -230,8 +239,117 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
                     <input type="password" name="password" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                   </div>
                   
-                  {/* 💡 [추가] 비회원 캡차 입력 영역 */}
-                  <div className="space-y-2 md:col-span-2">
+                 
+                </>
+              ) : (
+                <input type="hidden" name="writerName" value={userData?.name || '회원'} />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">제목 *</label>
+              <input type="text" name="title" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">내용 *</label>
+              {boardConfig.useEditor ? (
+                <CustomEditor 
+                  value={content} 
+                  onChange={setContent} 
+                  onImageAttach={handleEditorImageAttach}
+                  placeholder="자유롭게 내용을 작성해주세요." 
+                />
+              ) : (
+                <textarea 
+                  name="content" 
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  required 
+                  rows={12} 
+                  className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none leading-relaxed"
+                />
+              )}
+            </div>
+            {boardConfig.useExtraFields && extraFields.length > 0 && (
+              <div className="p-6 bg-slate-50/50 border border-slate-200 rounded-xl space-y-6">
+                <h3 className="font-bold text-slate-800 text-sm border-b border-slate-200 pb-2 mb-4">추가 정보 입력</h3>
+                {extraFields.map((field: any, idx: number) => (
+                  <div key={idx} className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">{field.fieldName}</label>
+                    {['text', 'number', 'url', 'email'].includes(field.inputType) ? (
+                      <input 
+                        type={field.inputType} 
+                        value={extraData[field.fieldName] || ''} 
+                        onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500" 
+                      />
+                    ) : field.inputType === 'select' ? (
+                      <select 
+                        value={extraData[field.fieldName] || ''} 
+                        onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                      >
+                        <option value="">선택하세요</option>
+                        {field.options?.split(',').map((opt: string) => <option key={opt} value={opt.trim()}>{opt.trim()}</option>)}
+                      </select>
+                    ) : field.inputType === 'radio' ? (
+                      <div className="flex flex-wrap gap-4 pt-1">
+                        {field.options?.split(',').map((opt: string) => (
+                          <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="radio" name={field.fieldName} value={opt.trim()} checked={extraData[field.fieldName] === opt.trim()} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                            {opt.trim()}
+                          </label>
+                        ))}
+                      </div>
+                    ) : field.inputType === 'checkbox' ? (
+                      <div className="flex flex-wrap gap-4 pt-1">
+                        {field.options?.split(',').map((opt: string) => (
+                          <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="checkbox" value={opt.trim()} checked={(extraData[field.fieldName] || []).includes(opt.trim())} onChange={(e) => handleCheckboxChange(field.fieldName, opt.trim(), e.target.checked)} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                            {opt.trim()}
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {boardConfig.fileUploadCount > 0 && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-end">
+                  <label className="text-sm font-bold text-slate-700">첨부파일</label>
+                  <span className="text-xs text-slate-500">({files.length} / {boardConfig.fileUploadCount}개)</span>
+                </div>
+                
+                <div 
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl transition-colors cursor-pointer ${isDragging ? 'border-blue-500 bg-blue-50/50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'}`}
+                >
+                  <p className="text-sm text-slate-600 font-medium">클릭하거나 파일을 이곳으로 드래그 하세요.</p>
+                  <input type="file" multiple ref={fileInputRef} onChange={handleFileInputChange} className="hidden" />
+                </div>
+
+                {files.length > 0 && (
+                  <ul className="mt-3 space-y-2">
+                    {files.map((file, index) => (
+                      <li key={index} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
+                        <span className="text-sm text-slate-700 truncate">{file.name}</span>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); removeFile(index); }} className="text-red-500 text-sm font-medium px-2 py-1">삭제</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            {/* 💡 [추가] 비회원 캡차 UI 영역 */}
+            {!isLoggedIn ? (
+              <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-bold text-slate-700">자동등록방지 (Captcha) *</label>
                     <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
                       {captchaSvg ? (
@@ -264,68 +382,7 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
                       </button>
                     </div>
                   </div>
-                </>
-              ) : (
-                <input type="hidden" name="writerName" value={userData?.name || '회원'} />
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">제목 *</label>
-              <input type="text" name="title" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">내용 *</label>
-              {boardConfig.useEditor ? (
-                <CustomEditor 
-                  value={content} 
-                  onChange={setContent} 
-                  onImageAttach={handleEditorImageAttach}
-                  placeholder="자유롭게 내용을 작성해주세요." 
-                />
-              ) : (
-                <textarea 
-                  name="content" 
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  required 
-                  rows={12} 
-                  className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none leading-relaxed"
-                />
-              )}
-            </div>
-
-            {boardConfig.fileUploadCount > 0 && (
-              <div className="space-y-2">
-                <div className="flex justify-between items-end">
-                  <label className="text-sm font-bold text-slate-700">첨부파일</label>
-                  <span className="text-xs text-slate-500">({files.length} / {boardConfig.fileUploadCount}개)</span>
-                </div>
-                
-                <div 
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl transition-colors cursor-pointer ${isDragging ? 'border-blue-500 bg-blue-50/50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'}`}
-                >
-                  <p className="text-sm text-slate-600 font-medium">클릭하거나 파일을 이곳으로 드래그 하세요.</p>
-                  <input type="file" multiple ref={fileInputRef} onChange={handleFileInputChange} className="hidden" />
-                </div>
-
-                {files.length > 0 && (
-                  <ul className="mt-3 space-y-2">
-                    {files.map((file, index) => (
-                      <li key={index} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
-                        <span className="text-sm text-slate-700 truncate">{file.name}</span>
-                        <button type="button" onClick={(e) => { e.stopPropagation(); removeFile(index); }} className="text-red-500 text-sm font-medium px-2 py-1">삭제</button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+            ):null}
 
             <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
               <button type="button" onClick={() => router.back()} className="px-6 py-3 font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">취소</button>

@@ -149,7 +149,13 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
   const removeFile = (indexToRemove: number) => {
     setFiles(prev => prev.filter((_, index) => index !== indexToRemove));
   };
-
+const handleCheckboxChange = (name: string, value: string, checked: boolean) => {
+    setExtraData(prev => {
+      const current = prev[name] || [];
+      if (checked) return { ...prev, [name]: [...current, value] };
+      else return { ...prev, [name]: current.filter((v: string) => v !== value) };
+    });
+  };
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -200,7 +206,7 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
   if (!boardConfig) return <div className="w-full text-center pt-32 text-slate-500 font-medium">로딩 중...</div>;
 
   const categories = boardConfig.categories ? boardConfig.categories.split(',').map((c: string) => c.trim()) : [];
-  
+  const extraFields = boardConfig.extraFields || [];
   return (
     <div className="w-full flex flex-col pt-24 pb-24 bg-slate-50/50 min-h-screen">
       <div className="max-w-4xl mx-auto px-4 w-full">
@@ -231,40 +237,7 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
                     <input type="password" name="password" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                   </div>
                   
-                  {/* 💡 [추가] 비회원 캡차 UI 영역 */}
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-sm font-bold text-slate-700">자동등록방지 (Captcha) *</label>
-                    <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                      {captchaSvg ? (
-                        <div 
-                          className="cursor-pointer bg-white border border-slate-200 rounded-lg overflow-hidden flex-shrink-0" 
-                          onClick={loadCaptcha}
-                          title="클릭하여 새로고침"
-                          dangerouslySetInnerHTML={{ __html: captchaSvg }} 
-                        />
-                      ) : (
-                        <div className="w-[120px] h-[40px] flex items-center justify-center bg-white border border-slate-200 rounded-lg text-sm text-slate-500">
-                          로딩중...
-                        </div>
-                      )}
-                      <input 
-                        type="text" 
-                        value={captchaInput}
-                        onChange={(e) => setCaptchaInput(e.target.value)}
-                        placeholder="왼쪽 문자 입력" 
-                        required={!isLoggedIn}
-                        className="flex-1 min-w-[150px] px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                      />
-                      <button 
-                        type="button" 
-                        onClick={loadCaptcha}
-                        className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors"
-                        title="새로고침"
-                      >
-                        ↻
-                      </button>
-                    </div>
-                  </div>
+                  
                   {/* ------------------------------- */}
                 </>
               ) : (
@@ -276,6 +249,51 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
               <label className="text-sm font-bold text-slate-700">제목 *</label>
               <input type="text" name="title" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
             </div>
+            {boardConfig.useExtraFields && extraFields.length > 0 && (
+              <div className="p-6 bg-slate-50/50 border border-slate-200 rounded-xl space-y-6">
+                <h3 className="font-bold text-slate-800 text-sm border-b border-slate-200 pb-2 mb-4">추가 정보 입력</h3>
+                {extraFields.map((field: any, idx: number) => (
+                  <div key={idx} className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">{field.fieldName}</label>
+                    {['text', 'number', 'url', 'email'].includes(field.inputType) ? (
+                      <input 
+                        type={field.inputType} 
+                        value={extraData[field.fieldName] || ''} 
+                        onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500" 
+                      />
+                    ) : field.inputType === 'select' ? (
+                      <select 
+                        value={extraData[field.fieldName] || ''} 
+                        onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                      >
+                        <option value="">선택하세요</option>
+                        {field.options?.split(',').map((opt: string) => <option key={opt} value={opt.trim()}>{opt.trim()}</option>)}
+                      </select>
+                    ) : field.inputType === 'radio' ? (
+                      <div className="flex flex-wrap gap-4 pt-1">
+                        {field.options?.split(',').map((opt: string) => (
+                          <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="radio" name={field.fieldName} value={opt.trim()} checked={extraData[field.fieldName] === opt.trim()} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                            {opt.trim()}
+                          </label>
+                        ))}
+                      </div>
+                    ) : field.inputType === 'checkbox' ? (
+                      <div className="flex flex-wrap gap-4 pt-1">
+                        {field.options?.split(',').map((opt: string) => (
+                          <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="checkbox" value={opt.trim()} checked={(extraData[field.fieldName] || []).includes(opt.trim())} onChange={(e) => handleCheckboxChange(field.fieldName, opt.trim(), e.target.checked)} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                            {opt.trim()}
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">내용 *</label>
@@ -328,6 +346,43 @@ export default function PostWritePage({ params }: { params: Promise<{ id: string
                 )}
               </div>
             )}
+            {/* 💡 [추가] 비회원 캡차 UI 영역 */}
+            {!isLoggedIn ? (
+              <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-slate-700">자동등록방지 (Captcha) *</label>
+                    <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      {captchaSvg ? (
+                        <div 
+                          className="cursor-pointer bg-white border border-slate-200 rounded-lg overflow-hidden flex-shrink-0" 
+                          onClick={loadCaptcha}
+                          title="클릭하여 새로고침"
+                          dangerouslySetInnerHTML={{ __html: captchaSvg }} 
+                        />
+                      ) : (
+                        <div className="w-[120px] h-[40px] flex items-center justify-center bg-white border border-slate-200 rounded-lg text-sm text-slate-500">
+                          로딩중...
+                        </div>
+                      )}
+                      <input 
+                        type="text" 
+                        value={captchaInput}
+                        onChange={(e) => setCaptchaInput(e.target.value)}
+                        placeholder="왼쪽 문자 입력" 
+                        required={!isLoggedIn}
+                        className="flex-1 min-w-[150px] px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                      <button 
+                        type="button" 
+                        onClick={loadCaptcha}
+                        className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors"
+                        title="새로고침"
+                      >
+                        ↻
+                      </button>
+                    </div>
+                  </div>
+            ):null}
+                  
 
             <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
               <button type="button" onClick={() => router.back()} className="px-6 py-3 font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">취소</button>
