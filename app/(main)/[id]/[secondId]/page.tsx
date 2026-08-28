@@ -88,7 +88,6 @@ export default function NestedSubPage() {
 
       {/* 4. 탭 메뉴 컴포넌트 렌더링 */}
       <TabMenu allMenus={allMenus} currentMenuId={pageData.menuId} />
-      {secondId}
       {secondId === "cert" ? (
           <CertificationList />
         ) : null}
