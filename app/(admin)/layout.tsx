@@ -121,8 +121,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {isCoopOpen && (
               <div className="pl-4 py-1 space-y-1 mt-1 border-l-2 border-indigo-600 ml-4">
                 <Link 
-                  href="/admin/certifications" 
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${pathname === '/admin/certifications' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  href="/admin/certification" 
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${pathname === '/admin/certification' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                 >
                   <Award size={14} />
                   <span>인증·인허가</span>
