@@ -18,34 +18,48 @@ export default function ExecutableHtml({ el, adaptColorForDarkMode, html }: Exec
     // 1. HTML을 DOM에 삽입
     container.innerHTML = html;
 
-    // 2. setTimeout을 사용해 DOM 렌더링이 완전히 끝난 직후 스크립트 실행 보장
-    const timeoutId = setTimeout(() => {
-      const scripts = container.querySelectorAll("script");
-      scripts.forEach((oldScript) => {
-        const newScript = document.createElement("script");
-        
-        Array.from(oldScript.attributes).forEach((attribute) => {
-          newScript.setAttribute(attribute.name, attribute.value);
+    // 💡 비동기로 스크립트를 순차적으로 실행하는 함수
+    const executeScriptsSequentially = async () => {
+      const scripts = Array.from(container.querySelectorAll("script"));
+      
+      for (const oldScript of scripts) {
+        await new Promise<void>((resolve) => {
+          const newScript = document.createElement("script");
+          
+          // 속성 복사
+          Array.from(oldScript.attributes).forEach((attribute) => {
+            newScript.setAttribute(attribute.name, attribute.value);
+          });
+          
+          // ✅ 수정: innerHTML 대신 textContent를 사용하여 코드 깨짐 방지
+          if (oldScript.textContent) {
+            newScript.textContent = oldScript.textContent;
+          }
+          
+          if (newScript.src) {
+            // ✅ 수정: 외부 스크립트(src가 있는 경우)는 로드가 완료될 때까지 대기
+            newScript.onload = () => resolve();
+            newScript.onerror = () => resolve(); // 로드 실패해도 다음 스크립트는 실행되도록 처리
+            oldScript.replaceWith(newScript);
+          } else {
+            // 인라인 스크립트인 경우 교체 후 즉시 완료 처리
+            oldScript.replaceWith(newScript);
+            resolve();
+          }
         });
-        
-        // ✅ 추가: 외부 스크립트 삽입 시 실행 순서 보장
-        if (oldScript.src) {
-          newScript.async = false;
-        }
-        
-        // ✅ 수정: textContent 대신 text 또는 innerHTML 사용
-        newScript.text = oldScript.innerHTML || oldScript.text;
-        
-        oldScript.replaceWith(newScript);
-      });
+      }
+    };
+
+    // 2. DOM 렌더링이 완전히 끝난 직후 스크립트 실행
+    const timeoutId = setTimeout(() => {
+      executeScriptsSequentially();
     }, 50);
 
     return () => {
-      // 컴포넌트가 언마운트될 때 타이머도 정리
       clearTimeout(timeoutId);
       container.innerHTML = "";
     };
-  }, [html]); // 💡 의존성 배열은 여전히 html만 둡니다!
+  }, [html]);
 
   return (
     <div 

@@ -10,8 +10,10 @@ import {
   BarChart2, Briefcase 
 } from "lucide-react";
 import TokenChecker from "@/components/TokenChecker";
+import { usePathname } from "next/navigation";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname(); 
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [adminInfo, setAdminInfo] = useState({ name: "", level: 0 });
 
@@ -39,7 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       localStorage.removeItem("user");
       window.location.href = "/login";
     }
-  }, []);
+  }, [pathname]);
 
   const handleLogout = () => {
     if (confirm("로그아웃 하시겠습니까?")) {

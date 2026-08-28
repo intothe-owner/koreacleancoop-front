@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { Menu, X, ChevronDown, UserCircle, Sun, Moon } from "lucide-react";
 import { useTheme } from "@teispace/next-themes";
+import { usePathname } from "next/navigation";
 
 interface MenuType {
   id: number;
@@ -32,7 +33,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
 
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-
+  const pathname = usePathname();
   useEffect(() => {
     setMounted(true);
 
@@ -53,7 +54,21 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userStr = localStorage.getItem("user");
 
+    if (token && userStr) {
+      setIsLoggedIn(true);
+      try {
+        setUserData(JSON.parse(userStr));
+      } catch (e) { }
+    } else {
+      // 💡 링크 이동 시 토큰이 없다면 로그아웃 상태로 갱신!
+      setIsLoggedIn(false);
+      setUserData(null);
+    }
+  }, [pathname]);
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
