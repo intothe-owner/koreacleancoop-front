@@ -47,7 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // 현재 경로가 협동조합 하위 메뉴 중 하나라면 자동으로 아코디언을 열어줌
   useEffect(() => {
-    if (pathname.startsWith("/admin/certifications")) {
+    if (pathname.startsWith("/admin/certification")) {
       setIsCoopOpen(true);
     }
   }, [pathname]);
