@@ -30,22 +30,38 @@ export default function CertificationList() {
   const LOUPE_SIZE = 240; // 돋보기 원형 크기 (px)
   const ZOOM_LEVEL = 2.5; // 확대 비율
 
-  // 마우스 이동 시 돋보기 위치 및 배경이미지 좌표 계산
+  // 🖱️ [PC] 마우스 이동 이벤트
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isLoupeMode || !imgRef.current) return;
-    
-    // 이미지의 화면상 실제 위치와 크기 구하기
+    updateLoupePosition(e.clientX, e.clientY);
+  };
+
+  // 📱 [모바일] 터치 이동 이벤트
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isLoupeMode || !imgRef.current) return;
+    const touch = e.touches[0]; // 첫 번째 터치 지점의 좌표를 가져옴
+    updateLoupePosition(touch.clientX, touch.clientY);
+  };
+
+  // 📱 [모바일] 터치 시작 이벤트 (터치하는 순간 돋보기 표시)
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isLoupeMode || !imgRef.current) return;
+    const touch = e.touches[0];
+    updateLoupePosition(touch.clientX, touch.clientY);
+  };
+
+  // 공통 돋보기 위치 계산 로직
+  const updateLoupePosition = (clientX: number, clientY: number) => {
+    if (!imgRef.current) return;
+
     const { left, top, width, height } = imgRef.current.getBoundingClientRect();
     
-    // 이미지 내에서의 마우스 좌표
-    const x = e.clientX - left;
-    const y = e.clientY - top;
+    const x = clientX - left;
+    const y = clientY - top;
 
-    // 배경 이미지를 얼마나 키울 것인가
     const bgW = width * ZOOM_LEVEL;
     const bgH = height * ZOOM_LEVEL;
 
-    // 마우스 포인터가 돋보기의 정중앙에 오도록 배경 이미지 이동
     const bgX = -((x * ZOOM_LEVEL) - LOUPE_SIZE / 2);
     const bgY = -((y * ZOOM_LEVEL) - LOUPE_SIZE / 2);
 
@@ -54,7 +70,7 @@ export default function CertificationList() {
 
   const closeModal = () => {
     setSelectedImage(null);
-    setIsLoupeMode(false); // 창 닫을 때 돋보기 모드 해제
+    setIsLoupeMode(false);
     setLoupe((prev) => ({ ...prev, show: false }));
   };
 
@@ -72,8 +88,6 @@ export default function CertificationList() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-12">
         {certs.map((cert: any) => (
           <div key={cert.id} className="flex flex-col items-center group">
-            
-            {/* 액자(Frame) 영역 - 리스트에서는 돋보기 아이콘 제거, 클릭만 가능 */}
             <div 
               className="relative w-full aspect-[3/4] bg-white border border-slate-200 p-2 shadow-sm cursor-pointer overflow-hidden transition-transform duration-300 group-hover:-translate-y-2"
               onClick={() => setSelectedImage(cert.imageUrl)}
@@ -84,10 +98,7 @@ export default function CertificationList() {
                 className="w-full h-full object-contain" 
               />
             </div>
-
-            {/* 하단 거치대 느낌 */}
             <div className="w-[105%] h-3 bg-gradient-to-b from-slate-200 to-slate-300 shadow-md rounded-b-md mb-6"></div>
-
             <h3 className="text-lg font-bold text-slate-800 text-center">
               {cert.title}
             </h3>
@@ -101,7 +112,7 @@ export default function CertificationList() {
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
           onClick={closeModal}
         >
-          {/* 우측 상단 버튼 영역 (닫기 + 돋보기 토글) */}
+          {/* 우측 상단 버튼 영역 */}
           <div className="absolute top-6 right-6 flex flex-col gap-4">
             <button 
               onClick={(e) => { e.stopPropagation(); closeModal(); }}
@@ -111,7 +122,6 @@ export default function CertificationList() {
               <X size={40} />
             </button>
             
-            {/* 💡 요청하신 빨간 테두리 위치의 돋보기 토글 버튼 */}
             <button 
               onClick={(e) => { 
                 e.stopPropagation(); 
@@ -131,14 +141,23 @@ export default function CertificationList() {
           {/* 이미지 표시 영역 */}
           <div 
             className="relative bg-white p-4 rounded shadow-2xl inline-block"
-            onClick={(e) => e.stopPropagation()} // 모달 내부 클릭 시 닫히지 않도록
+            onClick={(e) => e.stopPropagation()} 
           >
-            {/* 돋보기 모드가 켜져 있을 때는 cursor-none으로 마우스를 숨기고 동그라미만 보이게 함 */}
             <div
               className={`relative overflow-hidden ${isLoupeMode ? 'cursor-none' : 'cursor-default'}`}
+              // 💡 핵심: 돋보기 모드일 때 모바일에서 터치 드래그 시 화면이 스크롤되는 것을 방지
+              style={{ touchAction: isLoupeMode ? 'none' : 'auto' }} 
+              
+              // PC 마우스 이벤트
               onMouseMove={handleMouseMove}
               onMouseEnter={() => isLoupeMode && setLoupe(prev => ({ ...prev, show: true }))}
               onMouseLeave={() => setLoupe(prev => ({ ...prev, show: false }))}
+              
+              // 모바일 터치 이벤트 추가
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={() => setLoupe(prev => ({ ...prev, show: false }))}
+              onTouchCancel={() => setLoupe(prev => ({ ...prev, show: false }))}
             >
               <img 
                 ref={imgRef}
@@ -154,8 +173,9 @@ export default function CertificationList() {
                   style={{
                     width: `${LOUPE_SIZE}px`,
                     height: `${LOUPE_SIZE}px`,
+                    // 모바일에서는 손가락에 가려지지 않도록 돋보기를 살짝 위로 올리고 싶다면 top 좌표에서 값을 빼주셔도 됩니다.
                     left: `${loupe.x - LOUPE_SIZE / 2}px`,
-                    top: `${loupe.y - LOUPE_SIZE / 2}px`,
+                    top: `${loupe.y - LOUPE_SIZE / 2}px`, 
                     backgroundImage: `url(${selectedImage})`,
                     backgroundRepeat: 'no-repeat',
                     backgroundSize: `${loupe.bgW}px ${loupe.bgH}px`,
