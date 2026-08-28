@@ -1,14 +1,16 @@
-// src/app/(admin)/admin/certification/page.tsx
+// src/app/(admin)/admin/certifications/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, List, Award, FileText, Image as ImageIcon } from "lucide-react";
+import { Plus, Edit2, Trash2, List, Award, FileText, Image as ImageIcon, UploadCloud } from "lucide-react";
 
 export default function CertificationManager() {
   const [certifications, setCertifications] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<"LIST" | "FORM">("LIST");
   const [isEditing, setIsEditing] = useState(false);
+  
   const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false); // ✨ 드래그 상태 관리
   
   const initialForm = {
     id: null, 
@@ -35,16 +37,21 @@ export default function CertificationManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 🛡️ 필수 파일 검증 (새 등록일 때 파일이 없으면 차단)
+    if (!isEditing && !file) {
+      alert("인증서 파일을 첨부해주세요.");
+      return;
+    }
+
     const submitData = new FormData();
     
-    // 데이터 폼에 추가 (id와 imageUrl 제외)
     Object.entries(formData).forEach(([key, value]) => {
       if (value !== null && key !== 'imageUrl' && key !== 'id') {
         submitData.append(key, String(value));
       }
     });
 
-    // 백엔드 multer.single('file')에 맞춰 'file'이라는 키로 전송
     if (file) submitData.append("file", file);
 
     const url = isEditing 
@@ -76,6 +83,34 @@ export default function CertificationManager() {
       if (res.ok) fetchCertifications();
     } catch (error) {
       console.error("삭제 실패:", error);
+    }
+  };
+
+  // ==========================================
+  // ✨ 드래그 앤 드롭 이벤트 핸들러
+  // ==========================================
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      // 파일 타입 검증
+      if (droppedFile.type === "application/pdf" || droppedFile.type.startsWith("image/")) {
+        setFile(droppedFile);
+      } else {
+        alert("PDF 또는 이미지 파일만 첨부 가능합니다.");
+      }
     }
   };
 
@@ -205,32 +240,64 @@ export default function CertificationManager() {
               <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows={3} className={inputClass} placeholder="추가적인 설명이 필요하다면 입력해주세요."></textarea>
             </div>
 
-            {/* 파일 첨부 (PDF 지원 안내 포함) */}
-            <div className="col-span-2 bg-slate-50 p-5 rounded-xl border border-slate-200">
+            {/* ✨ 파일 첨부 (드래그 앤 드롭 영역) */}
+            <div className="col-span-2">
               <label className="block font-bold mb-2 text-slate-800">인증서 파일 첨부 <span className="text-red-500">*</span></label>
               <p className="text-xs text-slate-500 mb-3 flex items-center gap-1">
                 <FileText size={14}/> 
-                PDF 파일을 업로드하면 서버에서 <b>자동으로 고화질 이미지로 변환</b>하여 홈페이지에 최적화된 형태로 저장합니다. (JPG, PNG 등 이미지 파일도 가능)
+                PDF 파일을 업로드하면 서버에서 <b>자동으로 고화질 이미지로 변환</b>하여 최적화된 형태로 저장합니다.
               </p>
-              <input 
-                type="file" 
-                accept="application/pdf, image/*" 
-                onChange={e => setFile(e.target.files?.[0] || null)} 
-                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" 
-                required={!isEditing} // 새 글 작성시에만 필수, 수정 시에는 선택
-              />
-              
-              {/* 수정 모드일 때 기존 이미지 미리보기 */}
-              {formData.imageUrl && (
-                <div className="mt-4">
+
+              <div 
+                className={`relative flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl transition-all duration-200 ${
+                  isDragging 
+                    ? "bg-indigo-50 border-indigo-500" 
+                    : "bg-slate-50 border-slate-300 hover:bg-slate-100"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <input 
+                  type="file" 
+                  id="fileDropzone"
+                  accept="application/pdf, image/*" 
+                  onChange={e => setFile(e.target.files?.[0] || null)} 
+                  className="hidden" 
+                />
+                <label htmlFor="fileDropzone" className="flex flex-col items-center cursor-pointer w-full h-full text-center">
+                  <UploadCloud size={40} className={`mb-3 ${isDragging ? "text-indigo-600" : "text-slate-400"}`} />
+                  <span className="font-bold text-slate-700 text-sm mb-1">
+                    클릭하여 파일을 선택하거나 이곳으로 드래그 하세요
+                  </span>
+                  <span className="text-xs text-slate-500">지원 형식: PDF, JPG, PNG, GIF</span>
+                </label>
+              </div>
+
+              {/* 업로드된 파일 또는 기존 이미지 표시 영역 */}
+              {file ? (
+                <div className="mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="text-indigo-600" size={24} />
+                    <div>
+                      <p className="text-sm font-bold text-indigo-900">{file.name}</p>
+                      <p className="text-xs text-indigo-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => setFile(null)} className="text-red-500 hover:text-red-700 font-bold text-sm bg-white px-3 py-1.5 rounded border border-red-200">
+                    삭제
+                  </button>
+                </div>
+              ) : formData.imageUrl && (
+                <div className="mt-4 bg-slate-50 p-4 rounded-lg border border-slate-200 inline-block">
                   <p className="text-xs font-bold text-slate-500 mb-2">현재 등록된 이미지</p>
-                  <img src={formData.imageUrl} className="h-40 rounded-lg border object-contain bg-white shadow-sm" alt="현재 등록된 인증서" />
+                  <img src={formData.imageUrl} className="h-40 rounded border object-contain bg-white shadow-sm" alt="현재 등록된 인증서" />
                 </div>
               )}
             </div>
 
           </div>
-          <button type="submit" className="w-full bg-slate-900 text-white font-bold py-3.5 rounded-lg hover:bg-black transition text-lg">
+          <button type="submit" className="w-full bg-slate-900 text-white font-bold py-3.5 rounded-lg hover:bg-black transition text-lg mt-8">
             {isEditing ? "인증서 정보 수정하기" : "새 인증서 등록하기"}
           </button>
         </form>
