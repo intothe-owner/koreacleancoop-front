@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import TokenChecker from "@/components/TokenChecker";
 import { usePathname } from "next/navigation";
+import Script from "next/script";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname(); 
@@ -75,6 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-800">
+      
       <TokenChecker /> 
       <aside className="w-64 bg-slate-900 flex flex-col h-full flex-shrink-0 shadow-2xl z-20">
         <div className="h-16 flex items-center justify-center bg-slate-950 border-b border-slate-800 shadow-sm flex-shrink-0">
@@ -128,7 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <span>인증·인허가</span>
                 </Link>
                 <Link 
-                  href="#" 
+                  href="/admin/coopmembers" 
                   className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
                 >
                   <Users2 size={14} />
