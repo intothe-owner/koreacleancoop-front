@@ -6,7 +6,8 @@ import Link from "next/link";
 import { 
   Settings, Users, UserCheck, Menu as MenuIcon, 
   FileText, MessageSquare, LogOut, UserCircle, Loader2, Megaphone,
-  BarChart2, Building2, ChevronDown, Award, Users2, TrendingUp, HeartHandshake
+  BarChart2, Building2, ChevronDown, Award, Users2, TrendingUp, HeartHandshake,
+  ClipboardList
 } from "lucide-react";
 import TokenChecker from "@/components/TokenChecker";
 import { usePathname } from "next/navigation";
@@ -15,7 +16,7 @@ import Script from "next/script";
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname(); 
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [adminInfo, setAdminInfo] = useState({ name: "", level: 0 });
+  const [adminInfo, setAdminInfo] = useState({ id: 0,name: "", level: 0 });
 
   // 💡 '협동조합' 아코디언 메뉴 열림/닫힘 상태 관리
   const [isCoopOpen, setIsCoopOpen] = useState(false);
@@ -23,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
+    
 
     if (!token || !userStr) {
       alert("관리자 페이지입니다. 먼저 로그인해 주세요.");
@@ -37,7 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         window.location.href = "/";
         return;
       }
-      setAdminInfo({ name: user.name, level: user.level });
+      setAdminInfo({ id: user.id || user.userId, name: user.name, level: user.level });
       setIsAuthorized(true);
     } catch (e) {
       localStorage.removeItem("token");
@@ -105,6 +107,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <UserCheck size={18} />
             <span className="font-medium text-sm">회원 관리</span>
           </Link>
+          {adminInfo.id === 2 && (
+            <Link 
+              href="/admin/qualifications" 
+              className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
+                pathname.startsWith('/admin/qualifications') 
+                  ? 'bg-indigo-600 text-white' 
+                  : 'text-slate-300 hover:bg-indigo-600 hover:text-white'
+              }`}
+            >
+              <ClipboardList size={18} />
+              <span className="font-medium text-sm">에어컨세척자격증</span>
+            </Link>
+          )}
 
           {/* 💡 [신규] 협동조합 관리 아코디언 메뉴 */}
           <div>
