@@ -19,7 +19,7 @@ export default function ExamResultPage() {
 
     const fetchResult = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/qualifications/session/${localSessionId}/play-data`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'}/api/qualifications/session/${localSessionId}/play-data`);
         const data = await res.json();
 
         if (data.ok) {

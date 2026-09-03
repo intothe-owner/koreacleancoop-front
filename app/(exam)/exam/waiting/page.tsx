@@ -24,7 +24,7 @@ export default function ExamWaitingPage() {
     // 1. 현재 시험 상태 확인 (새로고침 시 이미 시작되었는지 체크)
     const checkCurrentStatus = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/qualifications/session/${sessionId}/play-data`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'}/api/qualifications/session/${sessionId}/play-data`);
         const data = await res.json();
         
         if (data.ok) {
@@ -56,7 +56,7 @@ export default function ExamWaitingPage() {
     checkCurrentStatus();
 
     // 2. Socket.io 실시간 연결 (시험 시작 감지)
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
     socketRef.current = io(backendUrl, {
       transports: ['websocket'], // 빠른 연결을 위해 웹소켓 전용 설정
     });

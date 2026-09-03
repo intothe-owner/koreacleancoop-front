@@ -46,7 +46,7 @@ export default function ExamResultsPage() {
       const token = localStorage.getItem("token");
       
       // 1. 시험 상태 조회 (종료 여부 확인용)
-      const examRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/qualifications/${examId}`, {
+      const examRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'}/api/qualifications/${examId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const examData = await examRes.json();
@@ -60,7 +60,7 @@ export default function ExamResultsPage() {
       if (keyword) queryParams.append("keyword", keyword);
       queryParams.append("pageSize", "1000"); 
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/qualifications/${examId}/sessions?${queryParams.toString()}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'}/api/qualifications/${examId}/sessions?${queryParams.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -81,7 +81,7 @@ export default function ExamResultsPage() {
   useEffect(() => {
     fetchResults();
 
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
     socketRef.current = io(backendUrl, { transports: ['websocket'] });
 
     socketRef.current.on('student_submitted', (data: any) => {
@@ -108,7 +108,7 @@ export default function ExamResultsPage() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/qualifications/${examId}/close`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'}/api/qualifications/${examId}/close`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` }
       });
