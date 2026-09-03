@@ -4,7 +4,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Search, Download, Award, Users, AlertCircle, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, Search, Download, Award, Users, AlertCircle, FileSpreadsheet, PowerOff, Lock } from "lucide-react";
 import * as XLSX from "xlsx";
 import { io, Socket } from "socket.io-client";
 
@@ -30,6 +30,7 @@ export default function ExamResultsPage() {
   const examId = params.id;
 
   const [loading, setLoading] = useState(true);
+  const [examStatus, setExamStatus] = useState<string>(""); // 💡 시험 상태 추가
   const [sessions, setSessions] = useState<ExamSession[]>([]);
   const [stats, setStats] = useState<ExamStats>({ totalParticipants: 0, passedParticipants: 0, passRate: 0 });
   
@@ -39,12 +40,21 @@ export default function ExamResultsPage() {
 
   const socketRef = useRef<Socket | null>(null);
 
-  // 💡 실시간 반영을 위해 useCallback으로 감싸기
   const fetchResults = useCallback(async (isSilent = false) => {
     try {
       if (!isSilent) setLoading(true);
       const token = localStorage.getItem("token");
       
+      // 1. 시험 상태 조회 (종료 여부 확인용)
+      const examRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/qualifications/${examId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const examData = await examRes.json();
+      if (examData.ok) {
+        setExamStatus(examData.data.exam.status);
+      }
+
+      // 2. 응시자 결과 목록 조회
       const queryParams = new URLSearchParams();
       if (filter !== "all") queryParams.append("isPassed", filter);
       if (keyword) queryParams.append("keyword", keyword);
@@ -71,29 +81,15 @@ export default function ExamResultsPage() {
   useEffect(() => {
     fetchResults();
 
-    // 💡 Socket.io 연결 (실시간 제출 감지)
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     socketRef.current = io(backendUrl, { transports: ['websocket'] });
 
-    // 수강생이 제출 버튼을 누르면 백그라운드에서 조용히 목록 갱신
     socketRef.current.on('student_submitted', (data: any) => {
-      // 💡 1. 신호가 도착했는지 확인하는 로그
-      console.log("⚡ [Socket] 수강생 제출 신호 도착!", data); 
-      
-      if (data.examId === Number(examId)) {
-        // 💡 2. 조건문(examId 일치)을 통과해서 새로고침을 실행하는지 확인하는 로그
-        console.log("🔄 목록 새로고침(fetchResults) 실행!"); 
-        fetchResults(true); // isSilent=true (로딩 스피너 없이 부드럽게 갱신)
-      }
+      if (data.examId === Number(examId)) fetchResults(true);
     });
 
-    // 👇👇👇 2. [여기에 새로 추가!] 수강생이 방금 [입장]했을 때 실시간 갱신 👇👇👇
     socketRef.current.on('new_student', (data: any) => {
-      console.log("⚡ [Socket] 신규 수강생 입장 신호 도착!", data); 
-      if (data.examId === Number(examId)) {
-        console.log("🔄 목록 새로고침(fetchResults) 실행! - 신규 입장"); 
-        fetchResults(true); // 부드럽게 갱신하여 표에 즉시 한 줄 추가됨
-      }
+      if (data.examId === Number(examId)) fetchResults(true);
     });
 
     return () => {
@@ -104,6 +100,29 @@ export default function ExamResultsPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setKeyword(searchInput);
+  };
+
+  // 💡 시험 종료 처리 함수
+  const handleCloseExam = async () => {
+    if (!confirm("시험을 강제로 종료하시겠습니까?\n종료 후에는 더 이상 수강생이 접속하거나 답안을 제출할 수 없습니다.")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/qualifications/${examId}/close`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data.ok) {
+        alert("시험이 완전히 종료되었습니다.");
+        setExamStatus("CLOSED");
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      alert("서버 통신 중 오류가 발생했습니다.");
+    }
   };
 
   const handleExportExcel = () => {
@@ -140,18 +159,38 @@ export default function ExamResultsPage() {
             <ArrowLeft size={20} className="text-slate-600" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">시험 결과 및 합격자 현황판</h1>
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+              시험 결과 및 합격자 현황판
+              {examStatus === 'CLOSED' && (
+                <span className="bg-slate-200 text-slate-600 px-2 py-1 rounded text-xs flex items-center gap-1">
+                  <Lock size={12} /> 마감됨
+                </span>
+              )}
+            </h1>
             <p className="text-slate-500 mt-1 text-sm">실시간으로 응시자들의 점수와 합격 여부가 업데이트됩니다.</p>
           </div>
         </div>
 
-        <button 
-          onClick={handleExportExcel}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-bold transition-all shadow-sm"
-        >
-          <FileSpreadsheet size={18} />
-          엑셀(Excel) 다운로드
-        </button>
+        <div className="flex items-center gap-2">
+          {/* 💡 시험 종료 버튼 (이미 종료되었으면 숨김) */}
+          {examStatus !== 'CLOSED' && (
+            <button 
+              onClick={handleCloseExam}
+              className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-lg font-bold transition-all shadow-sm"
+            >
+              <PowerOff size={18} />
+              시험 완전 종료
+            </button>
+          )}
+
+          <button 
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-bold transition-all shadow-sm"
+          >
+            <FileSpreadsheet size={18} />
+            엑셀(Excel) 다운로드
+          </button>
+        </div>
       </div>
 
       {/* 요약 통계 대시보드 */}

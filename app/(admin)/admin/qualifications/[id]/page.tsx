@@ -183,13 +183,23 @@ export default function QualificationDetailPage() {
           </div>
         </div>
 
-        <Link
-          href={`/admin/qualifications/${examId}/room`}
-          className="flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg"
-        >
-          <MonitorPlay size={20} />
-          대기실 입장 및 시험 시작
-        </Link>
+        {exam?.status === 'STARTED' || exam?.status === 'CLOSED' ? (
+          <Link
+            href={`/admin/qualifications/${examId}/results`}
+            className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg"
+          >
+            <MonitorPlay size={20} />
+            시험 결과 보기
+          </Link>
+        ) : (
+          <Link
+            href={`/admin/qualifications/${examId}/room`}
+            className="flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg"
+          >
+            <MonitorPlay size={20} />
+            대기실 입장 및 시험 시작
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
