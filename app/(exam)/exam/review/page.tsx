@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, ArrowLeft, CheckCircle2, XCircle, Download } from "lucide-react";
-import { toJpeg } from "html-to-image"; // 💡 새로 설치한 라이브러리로 교체
+import { toJpeg } from "html-to-image";
 import jsPDF from "jspdf";
 
-export default function ExamReviewPage() {
+// 💡 메인 컴포넌트 (Suspense 내부에서 렌더링됨)
+function ReviewContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const sessionId = searchParams.get("sessionId");
@@ -44,23 +45,19 @@ export default function ExamReviewPage() {
     fetchReview();
   }, [sessionId, router]);
 
-  // 💡 [수정됨] html-to-image를 사용한 PDF 생성 로직
   const handleDownloadPdf = async () => {
     if (!printRef.current) return;
 
     try {
       setIsDownloading(true);
       
-      // 최신 브라우저 렌더링 엔진을 사용하여 lab 색상 에러 원천 차단
       const dataUrl = await toJpeg(printRef.current, {
         cacheBust: true,
         backgroundColor: "#f8fafc",
-        pixelRatio: 2, // 고해상도
+        pixelRatio: 1.5, // 해상도 최적화
+        quality: 0.6,    // 용량 압축 (1/10 수준)
         filter: (node) => {
-          // data-html2canvas-ignore 속성이 있는 엘리먼트는 캡처에서 제외
-          if (node.hasAttribute && node.hasAttribute("data-html2canvas-ignore")) {
-            return false;
-          }
+          if (node.hasAttribute && node.hasAttribute("data-html2canvas-ignore")) return false;
           return true;
         },
       });
@@ -75,13 +72,13 @@ export default function ExamReviewPage() {
       let heightLeft = pdfHeight;
       let position = 0;
       
-      pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, pdfHeight);
+      pdf.addImage(dataUrl, "JPEG", 0, position, pdfWidth, pdfHeight);
       heightLeft -= pageHeight;
       
       while (heightLeft > 0) {
         position = heightLeft - pdfHeight;
         pdf.addPage();
-        pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, pdfHeight);
+        pdf.addImage(dataUrl, "JPEG", 0, position, pdfWidth, pdfHeight);
         heightLeft -= pageHeight;
       }
       
@@ -166,5 +163,14 @@ export default function ExamReviewPage() {
         })}
       </div>
     </div>
+  );
+}
+
+// 💡 Next.js 빌드 에러 방지용 Suspense 래퍼
+export default function ExamReviewPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-indigo-500" size={40} /></div>}>
+      <ReviewContent />
+    </Suspense>
   );
 }
