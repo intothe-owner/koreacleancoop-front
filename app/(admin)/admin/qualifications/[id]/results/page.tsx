@@ -280,6 +280,7 @@ export default function ExamResultsPage() {
                 <th className="px-6 py-4 text-center">점수</th>
                 <th className="px-6 py-4 text-center">결과</th>
                 <th className="px-6 py-4">접속 시간</th>
+                <th className="px-6 py-4">답안보기</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -336,6 +337,17 @@ export default function ExamResultsPage() {
 
                     <td className="px-6 py-4 text-slate-500 text-xs">
                       {new Date(session.createdAt).toLocaleString('ko-KR')}
+                    </td>
+                    <td className="px-6 py-4">
+                      {session.isSubmitted && (
+                        <Link 
+                          // 💡 바뀐 경로 적용: 해당 회차(examId) 폴더 하위의 session 폴더로 이동
+                          href={`/admin/qualifications/${examId}/session/${session.id}`} 
+                          className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded hover:bg-slate-200 transition-colors inline-block text-center whitespace-nowrap"
+                        >
+                          답안 확인 및 수정
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))

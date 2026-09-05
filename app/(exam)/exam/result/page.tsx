@@ -106,6 +106,12 @@ export default function ExamResultPage() {
 
           <div className="space-y-3">
             <button
+              onClick={() => router.push(`/exam/review?sessionId=${localStorage.getItem('sessionId')}`)}
+              className="w-full py-4 bg-indigo-100 text-indigo-700 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-200 transition-colors"
+            >
+              내 정답지 확인하기
+            </button>
+            <button
               onClick={handleGoHome}
               className="w-full py-4 bg-slate-800 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-900 transition-colors"
             >

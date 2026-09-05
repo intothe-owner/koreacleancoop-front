@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Loader2,
   PlayCircle,
+  Search, // 💡 검색 아이콘 추가
 } from "lucide-react";
 
 export default function ExamJoinContent() {
@@ -24,20 +25,33 @@ export default function ExamJoinContent() {
   const [hasExistingSession, setHasExistingSession] = useState(false);
 
   useEffect(() => {
+    // 💡 [수정] 토큰이 없더라도 경고창 띄우지 않고 자연스럽게 넘김 (조회하기 UI를 띄워주기 위함)
     if (!token) {
-      alert("유효하지 않은 접근입니다. QR 코드를 다시 스캔해 주세요.");
       setCheckingSession(false);
       return;
     }
 
-    const savedSessionId = localStorage.getItem("sessionId");
+    if (localStorage.getItem(`submitted_token_${token}`) === "true") {
+      alert("이 기기에서는 이미 답안 제출이 완료되었습니다. 재응시할 수 없습니다.");
+      router.replace("/");
+      return;
+    }
 
-    if (savedSessionId) {
+    const savedSessionId = localStorage.getItem("sessionId");
+    const savedToken = localStorage.getItem("currentToken");
+
+    if (savedSessionId && savedToken === token) {
       setHasExistingSession(true);
+    } else {
+      if (savedSessionId && savedToken !== token) {
+        localStorage.removeItem("sessionId");
+        localStorage.removeItem("examId");
+      }
+      setHasExistingSession(false);
     }
 
     setCheckingSession(false);
-  }, [token]);
+  }, [token, router]);
 
   const handleJoin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -80,15 +94,13 @@ export default function ExamJoinContent() {
         return;
       }
 
-      localStorage.setItem(
-        "sessionId",
-        data.data.sessionId.toString()
-      );
+      if (data.message && data.message.includes("이어풀기")) {
+        alert(data.message);
+      }
 
-      localStorage.setItem(
-        "examId",
-        data.data.examId.toString()
-      );
+      localStorage.setItem("currentToken", token);
+      localStorage.setItem("sessionId", data.data.sessionId.toString());
+      localStorage.setItem("examId", data.data.examId.toString());
 
       if (data.data.examStatus === "STARTED") {
         router.push("/exam/play");
@@ -132,39 +144,45 @@ export default function ExamJoinContent() {
     );
   }
 
+  // 💡 [수정] 토큰 없이 빈 주소로 들어온 경우 (과거 기록 조회 유도 화면)
   if (!token) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-red-100 p-8 text-center">
-          <div className="text-red-500 font-black text-xl">
-            유효하지 않은 접근입니다.
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-8 text-center">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Search size={32} className="text-slate-500" />
           </div>
-
-          <p className="mt-3 text-sm text-slate-500 leading-relaxed">
-            시험 입장용 QR 코드를 다시 스캔해 주세요.
+          <h2 className="text-2xl font-black text-slate-800 mb-3">
+            과거 시험 결과 조회
+          </h2>
+          <p className="text-sm text-slate-500 leading-relaxed mb-8">
+            시험 입장용 QR 코드를 스캔하지 않고 접속하셨습니다.<br />
+            이전에 응시했던 시험 결과를 확인하시겠습니까?
           </p>
+          <button
+            onClick={() => router.push("/exam/lookup")}
+            className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md"
+          >
+            <Search size={20} />
+            과거 시험 결과 조회하기
+          </button>
         </div>
       </div>
     );
   }
 
+  // 정상적인 입장 폼 화면
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-2 bg-indigo-600" />
-
         <div className="p-8 text-center border-b border-slate-100">
           <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ClipboardList
-              size={32}
-              className="text-indigo-600"
-            />
+            <ClipboardList size={32} className="text-indigo-600" />
           </div>
-
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">
             에어컨 세척 자격증
           </h1>
-
           <p className="text-slate-500 mt-2 text-sm font-medium">
             인적사항을 입력하고 시험에 입장해 주세요.
           </p>
@@ -176,12 +194,10 @@ export default function ExamJoinContent() {
               <h3 className="font-bold text-amber-800 text-lg mb-2">
                 진행 중인 시험이 있습니다!
               </h3>
-
               <p className="text-amber-700 text-sm mb-4 leading-relaxed">
                 이전에 접속하여 풀고 있던 시험 기록이 발견되었습니다.
                 이어서 진행하시겠습니까?
               </p>
-
               <button
                 type="button"
                 onClick={handleResume}
@@ -190,80 +206,86 @@ export default function ExamJoinContent() {
                 <PlayCircle size={20} />
                 이어서 풀기
               </button>
-
               <button
                 type="button"
                 onClick={handleResetSession}
-                className="w-full text-slate-500 font-medium py-3 text-sm underline underline-offset-4"
+                className="w-full text-slate-500 font-medium py-3 text-sm underline underline-offset-4 mb-4"
               >
                 아니요, 처음부터 다시 입력할게요.
               </button>
             </div>
+            
+            {/* 💡 이어풀기 화면 하단에도 조회 버튼 추가 */}
+            <button
+              type="button"
+              onClick={() => router.push("/exam/lookup")}
+              className="w-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all mt-4"
+            >
+              <Search size={20} />
+              과거 시험 결과 조회하기
+            </button>
           </div>
         ) : (
-          <form
-            onSubmit={handleJoin}
-            className="p-8 space-y-6"
-          >
-            <div>
-              <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
-                <Building2
-                  size={18}
-                  className="text-indigo-500"
+          <div className="p-8">
+            <form onSubmit={handleJoin} className="space-y-6">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
+                  <Building2 size={18} className="text-indigo-500" />
+                  센터(소속)명
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={centerName}
+                  onChange={(e) => setCenterName(e.target.value)}
+                  placeholder="예: 서울 강남센터"
+                  className="w-full px-5 py-4 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-lg font-medium"
                 />
-                센터(소속)명
-              </label>
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
+                  <User size={18} className="text-indigo-500" />
+                  수강생 이름
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={studentName}
+                  onChange={(e) => setStudentName(e.target.value)}
+                  placeholder="실명을 입력해 주세요"
+                  className="w-full px-5 py-4 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-lg font-medium"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all"
+              >
+                {loading ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <>
+                    <LogIn size={20} />
+                    입장하기
+                  </>
+                )}
+              </button>
+            </form>
 
-              <input
-                type="text"
-                required
-                value={centerName}
-                onChange={(e) => setCenterName(e.target.value)}
-                placeholder="예: 서울 강남센터"
-                className="w-full px-5 py-4 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-lg font-medium"
-              />
+            {/* 💡 신규 입장 폼 하단 조회 버튼 추가 */}
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => router.push("/exam/lookup")}
+                className="w-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm"
+              >
+                <Search size={20} />
+                과거 시험 결과 조회하기
+              </button>
             </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
-                <User
-                  size={18}
-                  className="text-indigo-500"
-                />
-                수강생 이름
-              </label>
-
-              <input
-                type="text"
-                required
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                placeholder="실명을 입력해 주세요"
-                className="w-full px-5 py-4 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-lg font-medium"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all mt-4"
-            >
-              {loading ? (
-                <Loader2
-                  className="animate-spin"
-                  size={20}
-                />
-              ) : (
-                <>
-                  <LogIn size={20} />
-                  입장하기
-                </>
-              )}
-            </button>
-          </form>
+          </div>
         )}
       </div>
-
       <p className="mt-8 text-slate-400 text-xs text-center">
         * 본 시험 시스템은 스마트폰 세로 모드에 최적화되어 있습니다.
       </p>

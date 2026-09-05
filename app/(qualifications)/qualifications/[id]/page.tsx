@@ -1,9 +1,8 @@
-// src/app/(qualifications)/qualifications/[id]/page.tsx (전체 덮어쓰기)
 "use client";
 
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Smartphone, Users, Loader2, CheckCircle2, Lock } from "lucide-react";
+import { Smartphone, Users, Loader2, CheckCircle2, Lock, Copy } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { io, Socket } from "socket.io-client";
 
@@ -68,6 +67,17 @@ export default function ProjectorScreenPage() {
     return () => { if (socketRef.current) socketRef.current.disconnect(); };
   }, [examId]);
 
+  // 💡 [추가] 클립보드 주소 복사 핸들러
+  const handleCopyUrl = async () => {
+    if (!qrJoinUrl) return;
+    try {
+      await navigator.clipboard.writeText(qrJoinUrl);
+      alert("접속 주소가 복사되었습니다!\n원하시는 곳에 붙여넣기(Ctrl+V) 해주세요.");
+    } catch (err) {
+      alert("주소 복사를 지원하지 않는 브라우저입니다. 주소를 직접 드래그해서 복사해주세요.");
+    }
+  };
+
   if (roomStatus === "LOADING") {
     return <div className="min-h-screen bg-slate-900 flex justify-center items-center"><Loader2 className="animate-spin text-white" size={40} /></div>;
   }
@@ -101,9 +111,22 @@ export default function ProjectorScreenPage() {
         <h1 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tight mb-4">에어컨 세척 자격증 시험</h1>
         <p className="text-2xl text-slate-600 flex justify-center gap-3"><Smartphone size={32} className="text-indigo-600" /> 스마트폰 카메라로 스캔하여 입장하세요.</p>
       </div>
-      <div className="p-8 bg-white border-[8px] border-slate-100 rounded-[3rem] shadow-2xl mb-12 transform scale-110">
+      
+      <div className="p-8 bg-white border-[8px] border-slate-100 rounded-[3rem] shadow-2xl mb-8 transform scale-110">
         <QRCodeSVG value={qrJoinUrl} size={400} level="H" includeMargin={false} />
       </div>
+
+      {/* 💡 [추가] 주소 복사하기 영역 */}
+      <div 
+        onClick={handleCopyUrl}
+        className="flex items-center gap-4 bg-white border border-slate-200 shadow-sm px-6 py-3 rounded-full mb-12 cursor-pointer hover:bg-slate-50 transition-all hover:border-indigo-300 group"
+      >
+        <span className="text-slate-500 font-medium text-lg max-w-md truncate">{qrJoinUrl}</span>
+        <div className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-full flex items-center gap-2 font-bold text-sm whitespace-nowrap group-hover:bg-indigo-100 transition-colors">
+          <Copy size={18} /> 주소 복사
+        </div>
+      </div>
+
       <div className="bg-slate-900 text-white px-8 py-5 rounded-full flex items-center gap-4 shadow-xl">
         <Users size={32} className="text-indigo-400" />
         <span className="text-2xl font-bold">현재 입장 인원 :</span>
