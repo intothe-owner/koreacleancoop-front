@@ -192,7 +192,11 @@ export default function ExamPlayPage() {
 
         const unanswered = questions.filter(q => !answers[q.id]);
         if (unanswered.length > 0) {
-            if (!confirm(`아직 풀지 않은 문제가 ${unanswered.length}개 있습니다. 그래도 제출하시겠습니까?`)) return;
+            if (!confirm(`아직 풀지 않은 문제가 ${unanswered.length}개 있습니다. 그래도 제출하시겠습니까?`)){
+
+            }else{
+                return;
+            }
         } else {
             if (!confirm("답안을 최종 제출하시겠습니까? 제출 후에는 수정할 수 없습니다.")) return;
         }

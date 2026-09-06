@@ -19,7 +19,7 @@ export default function AdminAnswerOverridePage() {
   // 데이터 로드
   const fetchReview = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/qualifications/session/${sessionId}/review`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'}/api/qualifications/session/${sessionId}/review`);
       const json = await res.json();
       if (json.ok) {
         setData(json.data);
@@ -48,7 +48,7 @@ export default function AdminAnswerOverridePage() {
       setIsUpdating(true);
       const token = localStorage.getItem("token");
       
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/qualifications/session/${sessionId}/admin-override`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000'}/api/qualifications/session/${sessionId}/admin-override`, {
         method: "PATCH",
         headers: { 
           "Content-Type": "application/json",
