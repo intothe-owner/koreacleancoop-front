@@ -66,7 +66,7 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
     setSubmittedSearch('');
     setSearch('');
     
-    const newUrl = cat ? `/boards/${boardId}?category=${encodeURIComponent(cat)}` : `/support/boards/${boardId}`;
+    const newUrl = cat ? `/support/boards/${boardId}?category=${encodeURIComponent(cat)}` : `/support/boards/${boardId}`;
     router.push(newUrl, { scroll: false });
   };
 
