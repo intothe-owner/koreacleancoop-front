@@ -79,11 +79,11 @@ export default function SubPage() {
       )}
 
       {/* 4. 탭 메뉴 */}
-      <TabMenu allMenus={allMenus} currentMenuId={pageData.menuId} />
+      {/* <TabMenu allMenus={allMenus} currentMenuId={pageData.menuId} /> */}
 
       {/* 본문 */}
       {pageData.contentBlocks && pageData.contentBlocks.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-3">
           <BlockRenderer blocks={pageData.contentBlocks} />
         </div>
       )}
