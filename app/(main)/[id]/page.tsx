@@ -83,7 +83,7 @@ export default function SubPage() {
 
       {/* 본문 */}
       {pageData.contentBlocks && pageData.contentBlocks.length > 0 && (
-        <div className="mt-3">
+        <div>
           <BlockRenderer blocks={pageData.contentBlocks} />
         </div>
       )}
