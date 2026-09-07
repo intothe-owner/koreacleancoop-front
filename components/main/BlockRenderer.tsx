@@ -18,7 +18,7 @@ interface ElementNode {
   buttonStyles?: any;
   tableData?: any;
   cardData?: any;
-  animation?: AnimationConfig; // 💡 개별 엘리먼트 애니메이션 설정 추가
+  animation?: AnimationConfig;
 }
 
 interface ColumnNode {
@@ -33,11 +33,15 @@ interface ContainerNode {
   animation?: AnimationConfig;
 }
 
+// 💡 [수정] max-w-6xl, mx-auto, px-4 등의 제한을 해제하여 w-full로 화면 양끝까지 꽉 차도록 변경했습니다.
 const AnimatedContainer = ({ container, children }: { container: ContainerNode, children: React.ReactNode }) => {
   const { animation } = container;
+  
+  // 전체 너비를 사용하는 클래스 (필요에 따라 상하 여백 py-8은 조절 가능)
+  const containerClass = "w-full py-4 flex flex-wrap";
 
   if (!animation || animation.type === "none") {
-    return <div className="w-full max-w-6xl mx-auto px-4 py-8 flex flex-wrap">{children}</div>;
+    return <div className={containerClass}>{children}</div>;
   }
 
   let initialStyle: any = { opacity: 0 };
@@ -59,14 +63,13 @@ const AnimatedContainer = ({ container, children }: { container: ContainerNode, 
       whileInView={whileInViewStyle}
       viewport={{ once: true, amount: 0.1 }}
       transition={{ duration: animation.duration, delay: animation.delay, ease: "easeOut" }}
-      className="w-full max-w-6xl mx-auto px-4 py-8 flex flex-wrap"
+      className={containerClass}
     >
       {children}
     </motion.div>
   );
 };
 
-// 💡 [핵심 추가] 개별 엘리먼트에 애니메이션을 적용해주는 래퍼 컴포넌트
 const AnimatedElement = ({ el, children }: { el: ElementNode, children: React.ReactNode }) => {
   const { animation, styles } = el;
   const baseClassName = "w-full flex";
@@ -143,9 +146,9 @@ export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
       {blocks.map((container) => (
         <AnimatedContainer key={container.id} container={container}>
           {container.columns.map((column) => (
-            <div key={column.id} className={`${getWidthClass(column.width)} px-4 md:px-8 flex flex-col gap-6`}>
+            // 💡 [수정] 컴포넌트가 화면 양 끝에 붙을 수 있도록 가로 패딩(px-4 md:px-8)을 제거했습니다.
+            <div key={column.id} className={`${getWidthClass(column.width)} flex flex-col gap-6`}>
               {column.elements.map((el) => (
-                // 💡 [변경] 기존 div 대신 AnimatedElement 래퍼를 사용하여 모든 엘리먼트에 애니메이션 적용
                 <AnimatedElement key={el.id} el={el}>
                   
                   {/* 1. 텍스트 엘리먼트 */}
@@ -235,8 +238,7 @@ export default function BlockRenderer({ blocks }: { blocks: ContainerNode[] }) {
                     </div>
                   )}
 
-                  {/* 8. 카드 엘리먼트 
-                      💡 [변경] 이미 AnimatedElement 래퍼가 애니메이션을 처리하므로, 충돌 방지를 위해 motion.div를 일반 div로 변경 */}
+                  {/* 8. 카드 엘리먼트 */}
                   {el.type === "CARD" && el.cardData && (
                     <div
                       style={{
