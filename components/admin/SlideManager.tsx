@@ -11,7 +11,6 @@ interface SlideManagerProps {
     activeSlideFocus: { index: number; field: 'title' | 'desc' } | null;
     setActiveSlideFocus: (focus: { index: number; field: 'title' | 'desc' } | null) => void;
     defaultSlide: SlideItem;
-    // 💡 페이지 헤더용 Props 추가
     pageMeta: { bgImage: string; bgTitle: string };
     setPageMeta: (meta: { bgImage: string; bgTitle: string }) => void;
     setMetaBgFile: (file: File | null) => void;
@@ -38,7 +37,6 @@ export default function SlideManager({
                             const type = e.target.value as "none" | "image" | "video" | "header";
                             setSliderType(type);
 
-                            // 헤더나 사용 안 함을 선택하면 기존 슬라이드 데이터 비우기
                             if (type === "none" || type === "header") {
                                 setSlides([]);
                             } else {
@@ -56,7 +54,6 @@ export default function SlideManager({
                         <option value="header">페이지헤더</option>
                     </select>
 
-                    {/* 헤더 선택 시에만 AI 버튼 노출 */}
                     {sliderType === "header" && setAiModalOpen && (
                         <button
                             onClick={() => setAiModalOpen('META', 'meta', JSON.stringify(pageMeta))}
@@ -127,6 +124,7 @@ export default function SlideManager({
                                     </div>
 
                                     <div className="md:col-span-2 space-y-3">
+                                        {/* 제목 영역 */}
                                         <div className="relative">
                                             <label className="block text-xs font-bold text-slate-500 mb-1">슬라이드 제목</label>
                                             {isTitleActive && (
@@ -138,7 +136,7 @@ export default function SlideManager({
                                                             updated[idx].titleStyle.fontFamily = e.target.value;
                                                             setSlides(updated);
                                                         }}
-                                                        className="border border-slate-200 rounded p-1 text-xs font-bold text-slate-700 outline-none"
+                                                        className="border border-slate-200 rounded p-1 text-xs font-bold text-slate-700 outline-none cursor-pointer"
                                                     >
                                                         <option value="default">기본 폰트</option>
                                                         <option value="var(--font-noto-sans)">Noto Sans KR</option>
@@ -166,18 +164,17 @@ export default function SlideManager({
                                                             updated[idx].titleStyle.color = e.target.value;
                                                             setSlides(updated);
                                                         }}
-                                                        className="w-5 h-5 p-0 border-none rounded cursor-pointer"
+                                                        className="w-5 h-5 p-0 border-none rounded cursor-pointer bg-transparent"
                                                     />
                                                 </div>
                                             )}
 
                                             <div
-                                                key={`slide-title-${idx}`}
                                                 contentEditable
                                                 suppressContentEditableWarning
                                                 onFocus={(e) => {
                                                     e.stopPropagation();
-                                                    if (!isTitleActive) setActiveSlideFocus({ index: idx, field: 'title' });
+                                                    setActiveSlideFocus({ index: idx, field: 'title' });
                                                 }}
                                                 onBlur={(e) => {
                                                     const updated = [...slides];
@@ -194,6 +191,7 @@ export default function SlideManager({
                                             />
                                         </div>
 
+                                        {/* 내용 영역 */}
                                         <div className="relative">
                                             <label className="block text-xs font-bold text-slate-500 mb-1">슬라이드 내용</label>
                                             {isDescActive && (
@@ -205,7 +203,7 @@ export default function SlideManager({
                                                             updated[idx].descStyle.fontFamily = e.target.value;
                                                             setSlides(updated);
                                                         }}
-                                                        className="border border-slate-200 rounded p-1 text-xs font-bold text-slate-700 outline-none"
+                                                        className="border border-slate-200 rounded p-1 text-xs font-bold text-slate-700 outline-none cursor-pointer"
                                                     >
                                                         <option value="default">기본 폰트</option>
                                                         <option value="var(--font-noto-sans)">Noto Sans KR</option>
@@ -233,7 +231,7 @@ export default function SlideManager({
                                                             updated[idx].descStyle.color = e.target.value;
                                                             setSlides(updated);
                                                         }}
-                                                        className="w-5 h-5 p-0 border-none rounded cursor-pointer"
+                                                        className="w-5 h-5 p-0 border-none rounded cursor-pointer bg-transparent"
                                                     />
                                                 </div>
                                             )}
@@ -243,7 +241,7 @@ export default function SlideManager({
                                                 suppressContentEditableWarning
                                                 onFocus={(e) => {
                                                     e.stopPropagation();
-                                                    if (!isTitleActive) setActiveSlideFocus({ index: idx, field: 'title' });
+                                                    setActiveSlideFocus({ index: idx, field: 'desc' });
                                                 }}
                                                 onBlur={(e) => {
                                                     const updated = [...slides];

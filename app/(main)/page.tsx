@@ -34,7 +34,6 @@ const fetchMainBoards = async () => {
   return boardsWithPosts;
 };
 
-// 💡 3. 더 이상 async function이 아닙니다!
 export default function MainPage() {
   
   // 💡 4. React Query의 useQuery 훅으로 데이터를 가져오고 상태를 관리합니다.
@@ -55,7 +54,7 @@ export default function MainPage() {
     queryFn: fetchMainBoards,
   });
 
-  // 💡 5. 로딩 중일 때 보여줄 UI를 간단하게 처리할 수 있습니다.
+  // 💡 5. 로딩 중일 때 보여줄 UI
   if (isMainLoading || isBoardsLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -73,7 +72,7 @@ export default function MainPage() {
     );
   }
 
-  // 💡 6. 렌더링 영역 (기존과 동일합니다)
+  // 💡 6. 렌더링 영역
   return (
     <div className="w-full flex flex-col pb-24">
       {/* 슬라이더 영역 */}
@@ -91,8 +90,84 @@ export default function MainPage() {
         <div className="w-full max-w-6xl mx-auto px-4 mt-16 flex flex-col gap-16">
           {mainBoardsWithPosts.map((board: any) => (
             <section key={board.id} className="w-full">
-              {/* ... (이하 기존 JSX 코드와 100% 동일) ... */}
-              {/* 코드 길이가 너무 길어 생략했지만 기존 리턴문 안에 있던 JSX를 그대로 쓰시면 됩니다. */}
+              {/* 게시판 타이틀 및 더보기 버튼 */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl md:text-2xl font-bold text-slate-900">
+                  {board.name || board.title || '게시판'}
+                </h2>
+                <Link
+                  href={`/boards/${board.tableName || board.id}`}
+                  className="text-sm text-slate-500 hover:text-slate-800 transition-colors"
+                >
+                  더보기 &gt;
+                </Link>
+              </div>
+
+              {/* 게시판 타입에 따른 분기 렌더링 */}
+              {board.boardType === 'gallery' ? (
+                // 갤러리형 렌더링: 사진(썸네일) 중심
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {board.posts.length > 0 ? (
+                    board.posts.map((post: any) => (
+                      <Link 
+                        href={`/boards/${board.tableName || board.id}/${post.id}`} 
+                        key={post.id} 
+                        className="group flex flex-col gap-3"
+                      >
+                        <div className="w-full aspect-square bg-slate-100 rounded-lg overflow-hidden relative">
+                          {(post.thumbnailUrl || post.imageUrl) ? (
+                            <img 
+                              src={post.thumbnailUrl || post.imageUrl} 
+                              alt={post.title} 
+                              className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" 
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+                              No Image
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-slate-900 line-clamp-1 group-hover:underline">
+                            {post.title}
+                          </h3>
+                          <p className="text-sm text-slate-500 mt-1">
+                            {new Date(post.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <p className="text-slate-500 col-span-full py-8 text-center bg-slate-50 rounded-lg">
+                      등록된 게시글이 없습니다.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                // 일반형 렌더링: 리스트 중심 (제목과 날짜)
+                <div className="flex flex-col border-t-2 border-slate-900">
+                  {board.posts.length > 0 ? (
+                    board.posts.map((post: any) => (
+                      <Link 
+                        href={`/boards/${board.tableName || board.id}/${post.id}`} 
+                        key={post.id} 
+                        className="flex items-center justify-between py-4 border-b border-slate-200 hover:bg-slate-50 transition-colors px-2"
+                      >
+                        <span className="font-medium text-slate-800 truncate pr-4 flex-1">
+                          {post.title}
+                        </span>
+                        <span className="text-sm text-slate-500 shrink-0 w-24 text-right">
+                          {new Date(post.createdAt).toLocaleDateString()}
+                        </span>
+                      </Link>
+                    ))
+                  ) : (
+                    <p className="text-slate-500 py-8 text-center border-b border-slate-200 bg-slate-50">
+                      등록된 게시글이 없습니다.
+                    </p>
+                  )}
+                </div>
+              )}
             </section>
           ))}
         </div>

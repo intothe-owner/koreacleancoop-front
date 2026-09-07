@@ -111,15 +111,27 @@ function SlideContent({ slide }: { slide: SlideItem }) {
   const getFontFamily = (fontFamily: string) => 
     fontFamily !== "default" ? fontFamily : "inherit";
 
+  // 💡 텍스트 정렬 스타일을 지원하기 위한 클래스 변환 맵
+  const getTextAlignClass = (align: "left" | "center" | "right") => {
+    switch (align) {
+      case "left": return "items-start text-left";
+      case "right": return "items-end text-right";
+      case "center":
+      default: return "items-center text-center";
+    }
+  };
+
   return (
-    <div className="absolute inset-0 flex flex-col justify-center items-center max-w-6xl mx-auto px-6 md:px-12 z-10 pt-16 pointer-events-none">
-      <div className="w-full flex flex-col items-center text-center gap-4 pointer-events-auto">
+    // 💡 justify-center를 justify-end로 바꾸고 아래쪽 여백(pb-24)을 주어 맨 아래쪽으로 배치합니다.
+    <div className="absolute inset-0 flex flex-col justify-end max-w-6xl mx-auto px-6 md:px-12 z-10 pb-24 pointer-events-none">
+      <div className={`w-full flex flex-col gap-4 pointer-events-auto ${getTextAlignClass(slide.titleStyle.textAlign)}`}>
         
         <div
           style={{
             fontSize: `${slide.titleStyle.fontSize}px`,
             color: slide.titleStyle.color,
             fontFamily: getFontFamily(slide.titleStyle.fontFamily),
+            textAlign: slide.titleStyle.textAlign,
           }}
           className="drop-shadow-lg leading-tight w-full"
           dangerouslySetInnerHTML={{ __html: slide.titleHtml }}
@@ -130,6 +142,7 @@ function SlideContent({ slide }: { slide: SlideItem }) {
             fontSize: `${slide.descStyle.fontSize}px`,
             color: slide.descStyle.color,
             fontFamily: getFontFamily(slide.descStyle.fontFamily),
+            textAlign: slide.descStyle.textAlign,
           }}
           className="drop-shadow-md max-w-2xl leading-relaxed w-full"
           dangerouslySetInnerHTML={{ __html: slide.descHtml }}
