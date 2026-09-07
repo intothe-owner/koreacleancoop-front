@@ -38,7 +38,7 @@ const AnimatedContainer = ({ container, children }: { container: ContainerNode, 
   const { animation } = container;
   
   // 전체 너비를 사용하는 클래스 (필요에 따라 상하 여백 py-8은 조절 가능)
-  const containerClass = "w-full py-4 flex flex-wrap";
+  const containerClass = "w-full flex flex-wrap";
 
   if (!animation || animation.type === "none") {
     return <div className={containerClass}>{children}</div>;
