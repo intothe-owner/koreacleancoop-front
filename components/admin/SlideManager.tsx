@@ -1,6 +1,6 @@
 // @/components/main/SlideManager.tsx
 import React from "react";
-import { Film, Upload, Plus, LayoutPanelTop, Sparkles, ImagePlus } from "lucide-react";
+import { Film, Upload, Plus, LayoutPanelTop, Sparkles, ImagePlus, Bold, Italic } from "lucide-react";
 import { SlideItem } from "@/types/types";
 
 interface SlideManagerProps {
@@ -127,6 +127,8 @@ export default function SlideManager({
                                         {/* 제목 영역 */}
                                         <div className="relative">
                                             <label className="block text-xs font-bold text-slate-500 mb-1">슬라이드 제목</label>
+                                            
+                                            {/* 💡 폰트, 크기, 색상, 굵기, 이탤릭 툴바 */}
                                             {isTitleActive && (
                                                 <div className="absolute -top-12 left-0 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-1.5 flex items-center gap-2 z-50 whitespace-nowrap">
                                                     <select
@@ -139,10 +141,21 @@ export default function SlideManager({
                                                         className="border border-slate-200 rounded p-1 text-xs font-bold text-slate-700 outline-none cursor-pointer"
                                                     >
                                                         <option value="default">기본 폰트</option>
-                                                        <option value="var(--font-noto-sans)">Noto Sans KR</option>
-                                                        <option value="var(--font-nanum-gothic)">나눔고딕</option>
-                                                        <option value="var(--font-gothic-a1)">Gothic A1</option>
+                                                        <option value="'Pretendard', sans-serif">Pretendard</option>
+                                                        <option value="'Noto Sans KR', sans-serif">Noto Sans KR</option>
+                                                        <option value="'Noto Serif KR', serif">Noto Serif KR</option>
+                                                        <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
+                                                        <option value="'Nanum Myeongjo', serif">나눔명조</option>
+                                                        <option value="'Nanum Pen Script', cursive">나눔펜글씨</option>
+                                                        <option value="'Gmarket Sans', sans-serif">G마켓 산스</option>
+                                                        <option value="'SUIT', sans-serif">SUIT</option>
+                                                        <option value="'Tossface', sans-serif">토스페이스</option>
+                                                        <option value="'Cafe24Ssurround', sans-serif">카페24 써라운드</option>
+                                                        <option value="'Jalnan', sans-serif">잘난체</option>
+                                                        <option value="'CookieRun', sans-serif">쿠키런체</option>
+                                                        <option value="Arial, sans-serif">Arial</option>
                                                     </select>
+                                                    
                                                     <div className="w-px h-4 bg-slate-300" />
                                                     <input
                                                         type="number"
@@ -155,6 +168,7 @@ export default function SlideManager({
                                                         className="w-12 text-center text-xs font-bold border border-slate-200 rounded py-0.5 outline-none"
                                                     />
                                                     <span className="text-[10px] text-slate-400">px</span>
+                                                    
                                                     <div className="w-px h-4 bg-slate-300" />
                                                     <input
                                                         type="color"
@@ -166,6 +180,31 @@ export default function SlideManager({
                                                         }}
                                                         className="w-5 h-5 p-0 border-none rounded cursor-pointer bg-transparent"
                                                     />
+
+                                                    {/* 💡 굵게 / 이탤릭체 버튼 */}
+                                                    <div className="w-px h-4 bg-slate-300" />
+                                                    <button
+                                                        type="button"
+                                                        title="굵게"
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault(); // 포커스 잃음 방지
+                                                            document.execCommand('bold', false);
+                                                        }}
+                                                        className="w-6 h-6 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"
+                                                    >
+                                                        <Bold size={14} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        title="기울임"
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault();
+                                                            document.execCommand('italic', false);
+                                                        }}
+                                                        className="w-6 h-6 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"
+                                                    >
+                                                        <Italic size={14} />
+                                                    </button>
                                                 </div>
                                             )}
 
@@ -186,7 +225,7 @@ export default function SlideManager({
                                                     color: slide.titleStyle.color,
                                                     fontFamily: slide.titleStyle.fontFamily !== 'default' ? slide.titleStyle.fontFamily : 'inherit',
                                                 }}
-                                                className="border border-slate-300 rounded-lg p-2.5 bg-white outline-none focus:border-indigo-500 font-bold min-h-[40px] cursor-text"
+                                                className="border border-slate-300 rounded-lg p-2.5 bg-white outline-none focus:border-indigo-500 min-h-[40px] cursor-text"
                                                 dangerouslySetInnerHTML={{ __html: slide.titleHtml }}
                                             />
                                         </div>
@@ -194,6 +233,7 @@ export default function SlideManager({
                                         {/* 내용 영역 */}
                                         <div className="relative">
                                             <label className="block text-xs font-bold text-slate-500 mb-1">슬라이드 내용</label>
+                                            
                                             {isDescActive && (
                                                 <div className="absolute -top-12 left-0 bg-white rounded-lg shadow-xl border border-slate-200 px-3 py-1.5 flex items-center gap-2 z-50 whitespace-nowrap">
                                                     <select
@@ -206,10 +246,21 @@ export default function SlideManager({
                                                         className="border border-slate-200 rounded p-1 text-xs font-bold text-slate-700 outline-none cursor-pointer"
                                                     >
                                                         <option value="default">기본 폰트</option>
-                                                        <option value="var(--font-noto-sans)">Noto Sans KR</option>
-                                                        <option value="var(--font-nanum-gothic)">나눔고딕</option>
-                                                        <option value="var(--font-gothic-a1)">Gothic A1</option>
+                                                        <option value="'Pretendard', sans-serif">Pretendard</option>
+                                                        <option value="'Noto Sans KR', sans-serif">Noto Sans KR</option>
+                                                        <option value="'Noto Serif KR', serif">Noto Serif KR</option>
+                                                        <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
+                                                        <option value="'Nanum Myeongjo', serif">나눔명조</option>
+                                                        <option value="'Nanum Pen Script', cursive">나눔펜글씨</option>
+                                                        <option value="'Gmarket Sans', sans-serif">G마켓 산스</option>
+                                                        <option value="'SUIT', sans-serif">SUIT</option>
+                                                        <option value="'Tossface', sans-serif">토스페이스</option>
+                                                        <option value="'Cafe24Ssurround', sans-serif">카페24 써라운드</option>
+                                                        <option value="'Jalnan', sans-serif">잘난체</option>
+                                                        <option value="'CookieRun', sans-serif">쿠키런체</option>
+                                                        <option value="Arial, sans-serif">Arial</option>
                                                     </select>
+                                                    
                                                     <div className="w-px h-4 bg-slate-300" />
                                                     <input
                                                         type="number"
@@ -222,6 +273,7 @@ export default function SlideManager({
                                                         className="w-12 text-center text-xs font-bold border border-slate-200 rounded py-0.5 outline-none"
                                                     />
                                                     <span className="text-[10px] text-slate-400">px</span>
+                                                    
                                                     <div className="w-px h-4 bg-slate-300" />
                                                     <input
                                                         type="color"
@@ -233,6 +285,30 @@ export default function SlideManager({
                                                         }}
                                                         className="w-5 h-5 p-0 border-none rounded cursor-pointer bg-transparent"
                                                     />
+
+                                                    <div className="w-px h-4 bg-slate-300" />
+                                                    <button
+                                                        type="button"
+                                                        title="굵게"
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault(); 
+                                                            document.execCommand('bold', false);
+                                                        }}
+                                                        className="w-6 h-6 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"
+                                                    >
+                                                        <Bold size={14} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        title="기울임"
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault();
+                                                            document.execCommand('italic', false);
+                                                        }}
+                                                        className="w-6 h-6 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 transition"
+                                                    >
+                                                        <Italic size={14} />
+                                                    </button>
                                                 </div>
                                             )}
 
