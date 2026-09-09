@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Loader2, Users, Shield, KeyRound, UserCheck, Power, FileText, Sparkles } from "lucide-react";
+import { Save, Loader2, Users, Shield, KeyRound, UserCheck, Power, FileText, Sparkles, Mail } from "lucide-react";
 
 export default function MemberSettingsPage() {
   const [formData, setFormData] = useState({
@@ -32,6 +32,13 @@ export default function MemberSettingsPage() {
     useKakaoLogin: false, kakaoClientId: "", kakaoClientSecret: "",
     useNaverLogin: false, naverClientId: "", naverClientSecret: "",
     useGoogleLogin: false, googleClientId: "", googleClientSecret: "",
+    useFindIdPwViaEmail: true,
+    findIdMethod: "PHONE",
+    smtpHost: "",
+    smtpPort: 465,
+    smtpUser: "",
+    smtpPassword: "",
+    smtpSecure: true,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +86,13 @@ export default function MemberSettingsPage() {
             useGoogleLogin: Boolean(json.data.useGoogleLogin),
             googleClientId: s(json.data.googleClientId),
             googleClientSecret: s(json.data.googleClientSecret),
+            useFindIdPwViaEmail: Boolean(json.data.useFindIdPwViaEmail ?? true),
+            findIdMethod: json.data.findIdMethod || "PHONE",
+            smtpHost: s(json.data.smtpHost),
+            smtpPort: json.data.smtpPort ?? 465,
+            smtpUser: s(json.data.smtpUser),
+            smtpPassword: s(json.data.smtpPassword),
+            smtpSecure: Boolean(json.data.smtpSecure ?? true),
           });
         }
       })
@@ -149,6 +163,19 @@ export default function MemberSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.useFindIdPwViaEmail) {
+      if (formData.findIdMethod === "PHONE") {
+        if (!formData.useName || !formData.useMobile) {
+          alert("경고: '이름 + 휴대폰 번호'로 아이디 찾기를 사용하려면 [1. 회원가입 폼] 설정에서 '이름 사용'과 '휴대폰 번호 사용'을 모두 켜야 합니다.");
+          return;
+        }
+      } else if (formData.findIdMethod === "DOB") {
+        if (!formData.useName || !formData.useDob) {
+          alert("경고: '이름 + 생년월일'로 아이디 찾기를 사용하려면 [1. 회원가입 폼] 설정에서 '이름 사용'과 '생년월일 사용'을 모두 켜야 합니다.");
+          return;
+        }
+      }
+    }
     setIsSaving(true);
 
     try {
@@ -220,7 +247,6 @@ export default function MemberSettingsPage() {
             <h3 className="text-lg font-bold text-slate-800">1. 회원가입 폼 및 가입 승인 제도</h3>
           </div>
           <div className="p-6 space-y-6">
-
             {/* 이메일 통합 토글 */}
             <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl flex items-center justify-between">
               <div>
@@ -232,6 +258,18 @@ export default function MemberSettingsPage() {
                 <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
               </label>
             </div>
+            {/* 아이디 비밀번호 찾기 설정 */}
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between mt-4">
+              <div>
+                <p className="font-bold text-slate-800">이메일로 계정 찾기 지원</p>
+                <p className="text-xs text-slate-500 mt-0.5">등록된 이메일 주소를 통해 아이디를 찾고 비밀번호를 재설정할 수 있도록 지원합니다.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="useFindIdPwViaEmail" checked={formData.useFindIdPwViaEmail} onChange={handleChange} className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+
 
             {/* 가입 승인제 설정 (신규 추가) */}
             <div className="p-5 border border-slate-200 rounded-xl space-y-4 bg-slate-50/50">
@@ -418,123 +456,223 @@ export default function MemberSettingsPage() {
               )}
             </div>
           </div>
-          {/* 가입약관 및 개인정보처리 방침 설정 */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center gap-2">
-              <FileText className="text-indigo-600" size={20} />
-              <h3 className="text-lg font-bold text-slate-800">4. 가입 약관 및 정책 설정</h3>
-            </div>
-            <div className="p-6 space-y-10">
 
-              {/* --- 이용약관 영역 --- */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center gap-2">
+            <Mail className="text-indigo-600" size={20} />
+            <h3 className="text-lg font-bold text-slate-800">5. 메일 서버 (SMTP) 설정</h3>
+          </div>
+          <div className="p-6 space-y-6">
+
+            <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl flex items-center justify-between">
+              <div>
+                <p className="font-bold text-slate-800">이메일로 계정 찾기 지원</p>
+                <p className="text-xs text-slate-500 mt-0.5">이메일을 통한 아이디 찾기 및 비밀번호 재설정 기능을 활성화합니다.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="useFindIdPwViaEmail" checked={formData.useFindIdPwViaEmail} onChange={handleChange} className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+
+            {formData.useFindIdPwViaEmail && (
+              <div className="p-5 border border-slate-200 rounded-xl space-y-5 bg-slate-50/30">
+                <p className="text-sm text-slate-600 font-medium">메일 발송을 위한 SMTP 정보를 정확히 입력해주세요. (예: 네이버, 구글 Workspace 등)</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="font-bold text-slate-800 text-base">이용약관 동의</p>
-                    <p className="text-xs text-slate-500 mt-1">회원가입 시 이용약관 동의 항목을 노출합니다.</p>
+                    <label className={labelClass}>SMTP 호스트</label>
+                    <input type="text" name="smtpHost" value={formData.smtpHost} onChange={handleChange} className={inputClass} placeholder="예: smtp.naver.com" />
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" name="useTermsOfService" checked={formData.useTermsOfService} onChange={handleChange} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                  </label>
+                  <div>
+                    <label className={labelClass}>포트 (Port)</label>
+                    <input type="number" name="smtpPort" value={formData.smtpPort} onChange={handleChange} className={inputClass} placeholder="예: 465 또는 587" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>발송 계정 (이메일 주소)</label>
+                    <input type="text" name="smtpUser" value={formData.smtpUser} onChange={handleChange} className={inputClass} placeholder="예: admin@yourdomain.com" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>비밀번호 (또는 앱 비밀번호)</label>
+                    <input type="password" name="smtpPassword" value={formData.smtpPassword} onChange={handleChange} className={inputClass} placeholder="발송 계정의 비밀번호" />
+                  </div>
                 </div>
 
-                {formData.useTermsOfService && (
-                  <div className="space-y-3">
-                    {/* AI 어시스턴트 입력 폼 */}
-                    <div className="flex flex-col gap-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                      <label className="text-sm font-bold text-indigo-700 flex items-center gap-1.5">
-                        <Sparkles size={16} className="text-indigo-500" />
-                        AI 자동 작성 및 수정
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={aiPrompts.terms}
-                          onChange={(e) => setAiPrompts(prev => ({ ...prev, terms: e.target.value }))}
-                          placeholder="예: 표준 쇼핑몰 이용약관 초안을 작성해줘"
-                          className="flex-1 border border-indigo-200 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white"
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAIGenerate("terms"); } }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAIGenerate("terms")}
-                          disabled={isGenerating.terms}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50 min-w-[110px] flex justify-center items-center gap-1.5 transition-colors"
-                        >
-                          {isGenerating.terms ? <><Loader2 className="animate-spin" size={16} /> 생성 중</> : "AI 적용"}
-                        </button>
-                      </div>
-                    </div>
-
-                    <textarea
-                      name="termsContent"
-                      value={formData.termsContent}
-                      onChange={handleChange}
-                      rows={12}
-                      placeholder="이용약관 내용을 입력하세요. (HTML 또는 평문 지원)"
-                      className={inputClass}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* --- 개인정보처리방침 영역 --- */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                  <div>
-                    <p className="font-bold text-slate-800 text-base">개인정보처리방침 동의</p>
-                    <p className="text-xs text-slate-500 mt-1">회원가입 시 개인정보 수집 및 이용 동의 항목을 노출합니다.</p>
-                  </div>
+                <div className="flex items-center gap-3 pt-2">
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" name="usePrivacyPolicy" checked={formData.usePrivacyPolicy} onChange={handleChange} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    <input type="checkbox" name="smtpSecure" checked={formData.smtpSecure} onChange={handleChange} className="sr-only peer" />
+                    <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
                   </label>
+                  <span className="text-sm font-bold text-slate-700">SSL/TLS 보안 연결 사용 (포트가 465일 경우 켜기)</span>
+                </div>
+              </div>
+            )}
+            <div className="space-y-3">
+                  <h4 className="font-bold text-slate-700 border-b border-slate-200 pb-2">아이디 찾기 허용 기준</h4>
+                  <div className="flex flex-col gap-3 pt-1">
+                    
+                    {/* 라디오 1: 휴대폰 번호 */}
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="findIdMethod" 
+                        value="PHONE" 
+                        checked={formData.findIdMethod === "PHONE"} 
+                        onChange={handleChange} 
+                        className="w-5 h-5 text-indigo-600 border-slate-300 focus:ring-indigo-500" 
+                      />
+                      <span className="text-sm font-semibold text-slate-800">이름 + 휴대폰 번호 입력하여 찾기</span>
+                      
+                      {formData.findIdMethod === "PHONE" && (!formData.useName || !formData.useMobile) && (
+                        <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">
+                          * 주의: [회원가입 폼] 설정에서 이름과 휴대폰 번호 사용이 체크되어 있어야 합니다.
+                        </span>
+                      )}
+                    </label>
+
+                    {/* 라디오 2: 생년월일 */}
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="findIdMethod" 
+                        value="DOB" 
+                        checked={formData.findIdMethod === "DOB"} 
+                        onChange={handleChange} 
+                        className="w-5 h-5 text-indigo-600 border-slate-300 focus:ring-indigo-500" 
+                      />
+                      <span className="text-sm font-semibold text-slate-800">이름 + 생년월일 입력하여 찾기</span>
+                      
+                      {formData.findIdMethod === "DOB" && (!formData.useName || !formData.useDob) && (
+                        <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">
+                          * 주의: [회원가입 폼] 설정에서 이름과 생년월일 사용이 체크되어 있어야 합니다.
+                        </span>
+                      )}
+                    </label>
+
+                  </div>
                 </div>
 
-                {formData.usePrivacyPolicy && (
-                  <div className="space-y-3">
-                    {/* AI 어시스턴트 입력 폼 */}
-                    <div className="flex flex-col gap-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                      <label className="text-sm font-bold text-indigo-700 flex items-center gap-1.5">
-                        <Sparkles size={16} className="text-indigo-500" />
-                        AI 자동 작성 및 수정
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={aiPrompts.privacy}
-                          onChange={(e) => setAiPrompts(prev => ({ ...prev, privacy: e.target.value }))}
-                          placeholder="예: 이름, 이메일, 연락처를 수집하는 개인정보처리방침 작성해줘"
-                          className="flex-1 border border-indigo-200 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white"
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAIGenerate("privacy"); } }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAIGenerate("privacy")}
-                          disabled={isGenerating.privacy}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50 min-w-[110px] flex justify-center items-center gap-1.5 transition-colors"
-                        >
-                          {isGenerating.privacy ? <><Loader2 className="animate-spin" size={16} /> 생성 중</> : "AI 적용"}
-                        </button>
-                      </div>
-                    </div>
-
-                    <textarea
-                      name="privacyContent"
-                      value={formData.privacyContent}
-                      onChange={handleChange}
-                      rows={12}
-                      placeholder="개인정보처리방침 내용을 입력하세요. (HTML 또는 평문 지원)"
-                      className={inputClass}
-                    />
-                  </div>
-                )}
-              </div>
-
-            </div>
           </div>
         </div>
+        {/* 가입약관 및 개인정보처리 방침 설정 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center gap-2">
+            <FileText className="text-indigo-600" size={20} />
+            <h3 className="text-lg font-bold text-slate-800">5. 가입 약관 및 정책 설정</h3>
+          </div>
+          <div className="p-6 space-y-10">
+
+            {/* --- 이용약관 영역 --- */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <div>
+                  <p className="font-bold text-slate-800 text-base">이용약관 동의</p>
+                  <p className="text-xs text-slate-500 mt-1">회원가입 시 이용약관 동의 항목을 노출합니다.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" name="useTermsOfService" checked={formData.useTermsOfService} onChange={handleChange} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+
+              {formData.useTermsOfService && (
+                <div className="space-y-3">
+                  {/* AI 어시스턴트 입력 폼 */}
+                  <div className="flex flex-col gap-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                    <label className="text-sm font-bold text-indigo-700 flex items-center gap-1.5">
+                      <Sparkles size={16} className="text-indigo-500" />
+                      AI 자동 작성 및 수정
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={aiPrompts.terms}
+                        onChange={(e) => setAiPrompts(prev => ({ ...prev, terms: e.target.value }))}
+                        placeholder="예: 표준 쇼핑몰 이용약관 초안을 작성해줘"
+                        className="flex-1 border border-indigo-200 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white"
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAIGenerate("terms"); } }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAIGenerate("terms")}
+                        disabled={isGenerating.terms}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50 min-w-[110px] flex justify-center items-center gap-1.5 transition-colors"
+                      >
+                        {isGenerating.terms ? <><Loader2 className="animate-spin" size={16} /> 생성 중</> : "AI 적용"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <textarea
+                    name="termsContent"
+                    value={formData.termsContent}
+                    onChange={handleChange}
+                    rows={12}
+                    placeholder="이용약관 내용을 입력하세요. (HTML 또는 평문 지원)"
+                    className={inputClass}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* --- 개인정보처리방침 영역 --- */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <div>
+                  <p className="font-bold text-slate-800 text-base">개인정보처리방침 동의</p>
+                  <p className="text-xs text-slate-500 mt-1">회원가입 시 개인정보 수집 및 이용 동의 항목을 노출합니다.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" name="usePrivacyPolicy" checked={formData.usePrivacyPolicy} onChange={handleChange} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+
+              {formData.usePrivacyPolicy && (
+                <div className="space-y-3">
+                  {/* AI 어시스턴트 입력 폼 */}
+                  <div className="flex flex-col gap-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                    <label className="text-sm font-bold text-indigo-700 flex items-center gap-1.5">
+                      <Sparkles size={16} className="text-indigo-500" />
+                      AI 자동 작성 및 수정
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={aiPrompts.privacy}
+                        onChange={(e) => setAiPrompts(prev => ({ ...prev, privacy: e.target.value }))}
+                        placeholder="예: 이름, 이메일, 연락처를 수집하는 개인정보처리방침 작성해줘"
+                        className="flex-1 border border-indigo-200 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white"
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAIGenerate("privacy"); } }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAIGenerate("privacy")}
+                        disabled={isGenerating.privacy}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50 min-w-[110px] flex justify-center items-center gap-1.5 transition-colors"
+                      >
+                        {isGenerating.privacy ? <><Loader2 className="animate-spin" size={16} /> 생성 중</> : "AI 적용"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <textarea
+                    name="privacyContent"
+                    value={formData.privacyContent}
+                    onChange={handleChange}
+                    rows={12}
+                    placeholder="개인정보처리방침 내용을 입력하세요. (HTML 또는 평문 지원)"
+                    className={inputClass}
+                  />
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+
 
         {/* 저장 버튼 */}
         <div className="flex justify-end pt-2 pb-10">

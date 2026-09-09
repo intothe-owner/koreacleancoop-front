@@ -85,9 +85,6 @@ export default function LoginForm({ settings }: LoginFormProps) {
       <div>
         <div className="flex justify-between items-center mb-1.5">
           <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">비밀번호</label>
-          <Link href="#" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
-            비밀번호 찾기
-          </Link>
         </div>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

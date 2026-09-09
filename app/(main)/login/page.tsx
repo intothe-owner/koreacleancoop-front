@@ -40,7 +40,18 @@ export default function LoginPage() {
         </div>
 
         <LoginForm settings={settings} />
-
+        {/* 💡 이메일 계정 찾기 설정이 켜져 있는 경우에만 아이디/비밀번호 찾기 링크 노출 */}
+{settings?.useFindIdPwViaEmail && (
+  <div className="flex items-center justify-center gap-4 text-sm text-slate-500 dark:text-slate-400 mt-4">
+    <Link href="/find-id" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+      아이디 찾기
+    </Link>
+    <span className="text-slate-300 dark:text-slate-600">|</span>
+    <Link href="/find-password" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+      비밀번호 재설정
+    </Link>
+  </div>
+)}
         {(settings?.useKakaoLogin || settings?.useNaverLogin || settings?.useGoogleLogin) && (
           <div className="mt-6">
             <div className="relative">
