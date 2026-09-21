@@ -52,7 +52,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const mediaUrls: string[] = typeof post.mediaUrls === 'string' ? JSON.parse(post.mediaUrls) : (post.mediaUrls || []);
-  const hasFiles = boardConfig?.useEditor ? mediaUrls.length > 0 : mediaUrls.some((url: string) => !isImage(url) && !isVideo(url));
+  // hasFiles 변수 등은 놔두고 실제 화면에 그려줄 때 mediaUrls 배열을 사용합니다.
   const extraFields = boardConfig?.extraFields || [];
   const extraData = typeof post.extraData === 'string'
     ? (() => { try { return JSON.parse(post.extraData); } catch { return {}; } })()
@@ -94,6 +94,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             </dl>
           )}
 
+          {/* 본문 영역 */}
           <div className="px-6 py-8 md:px-10 md:py-12">
             {boardConfig?.useEditor ? (
               <div className="text-slate-800 text-lg leading-relaxed min-h-[250px] editor-output" dangerouslySetInnerHTML={{ __html: post.content }} />
@@ -101,6 +102,39 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               <div className="text-slate-800 text-lg leading-relaxed whitespace-pre-wrap min-h-[250px]">{post.content}</div>
             )}
           </div>
+
+          {/* 💡 첨부파일 목록 렌더링 영역 추가 */}
+          {mediaUrls.length > 0 && (
+            <div className="px-6 py-5 md:px-10 border-t border-slate-100 bg-slate-50/50">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                </svg>
+                첨부파일 ({mediaUrls.length})
+              </h3>
+              <ul className="flex flex-col gap-2">
+                {mediaUrls.map((url: string, index: number) => {
+                  // URL에서 파일명만 추출하여 디코딩 (한글 파일명 깨짐 방지)
+                  const rawFileName = url.split('/').pop()?.split('?')[0];
+                  const fileName = rawFileName ? decodeURIComponent(rawFileName) : `첨부파일 ${index + 1}`;
+                  
+                  return (
+                    <li key={index} className="flex items-center">
+                      <a 
+                        href={url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all"
+                        download
+                      >
+                        {fileName}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </article>
 
         <div className="flex justify-between items-center mt-8">

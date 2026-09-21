@@ -97,15 +97,16 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
     setEditorFiles(prev => [...prev, { file, id }]);
   };
 
+  // 💡 기존 파일 갯수를 고려하여 새 첨부파일 개수 제한을 체크하도록 보완
   const addFiles = (newFiles: File[]) => {
-    setFiles(prev => {
-      const totalFiles = [...prev, ...newFiles];
-      if (totalFiles.length > boardConfig.fileUploadCount) {
-        alert(`첨부파일은 최대 ${boardConfig.fileUploadCount}개까지만 업로드 가능합니다.`);
-        return totalFiles.slice(0, boardConfig.fileUploadCount);
-      }
-      return totalFiles;
-    });
+    const currentTotal = existingFiles.length + files.length;
+    if (currentTotal + newFiles.length > boardConfig.fileUploadCount) {
+      alert(`첨부파일은 최대 ${boardConfig.fileUploadCount}개까지만 업로드 가능합니다.`);
+      const spaceLeft = Math.max(0, boardConfig.fileUploadCount - currentTotal);
+      if (spaceLeft > 0) setFiles(prev => [...prev, ...newFiles.slice(0, spaceLeft)]);
+    } else {
+      setFiles(prev => [...prev, ...newFiles]);
+    }
   };
 
   const removeFile = (indexToRemove: number) => {
@@ -208,6 +209,81 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
               )}
             </div>
 
+            {/* 💡 파일 첨부 영역 추가 (수정 시 기존 파일 유지 및 새 파일 드래그앤드롭) */}
+            {boardConfig.fileUploadCount > 0 && (
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-slate-700 flex justify-between items-center">
+                  <span>첨부파일</span>
+                  <span className="text-xs text-slate-500 font-medium">최대 {boardConfig.fileUploadCount}개</span>
+                </label>
+                
+                <div 
+                  className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer
+                    ${isDragging ? 'border-blue-500 bg-blue-50/50' : 'border-slate-300 hover:border-slate-400 bg-slate-50/50 hover:bg-slate-50'}`}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    if (e.dataTransfer.files) addFiles(Array.from(e.dataTransfer.files));
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    multiple 
+                    onChange={(e) => {
+                      if (e.target.files) addFiles(Array.from(e.target.files));
+                      e.target.value = ''; // 재선택을 위한 초기화
+                    }} 
+                  />
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    <p className="text-sm font-medium text-slate-600">클릭하거나 파일을 이곳으로 드래그하세요</p>
+                    <p className="text-xs text-slate-400">현재 첨부된 파일: {existingFiles.length + files.length} / {boardConfig.fileUploadCount}개</p>
+                  </div>
+                </div>
+
+                {/* 1. 기존 첨부파일 목록 */}
+                {existingFiles.length > 0 && (
+                  <ul className="space-y-2 mt-4">
+                    {existingFiles.map((url, index) => {
+                      const rawFileName = url.split('/').pop()?.split('?')[0];
+                      const fileName = rawFileName ? decodeURIComponent(rawFileName) : `기존 파일 ${index + 1}`;
+                      return (
+                        <li key={`existing-${index}`} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
+                          <span className="text-sm text-slate-700 truncate max-w-[80%]">
+                            {fileName} <span className="text-xs text-blue-500 ml-2 font-medium">(기존 파일)</span>
+                          </span>
+                          <button type="button" onClick={() => removeExistingFile(index)} className="text-slate-400 hover:text-red-500 p-1">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                {/* 2. 신규 첨부파일 목록 */}
+                {files.length > 0 && (
+                  <ul className="space-y-2 mt-2">
+                    {files.map((file, index) => (
+                      <li key={`new-${index}`} className="flex items-center justify-between p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+                        <span className="text-sm text-blue-800 truncate max-w-[80%]">
+                          {file.name} <span className="text-xs text-blue-500 ml-2 font-medium">(새로 추가됨)</span>
+                        </span>
+                        <button type="button" onClick={() => removeFile(index)} className="text-slate-400 hover:text-red-500 p-1">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
             {boardConfig.useExtraFields && extraFields.length > 0 && (
               <div className="p-6 bg-slate-50/50 border border-slate-200 rounded-xl space-y-6">
                 <h3 className="font-bold text-slate-800 text-sm border-b border-slate-200 pb-2">추가 정보 수정</h3>
@@ -217,11 +293,20 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string,
                     {['text', 'number', 'url', 'email', 'date'].includes(field.inputType) ? (
                       <input type={field.inputType} value={extraData[field.fieldName] ?? ''} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500" />
                     ) : field.inputType === 'select' ? (
-                      <select value={extraData[field.fieldName] ?? ''} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500"><option value="">선택하세요</option>{field.options?.split(',').map((opt: string) => <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>)}</select>
+                      <select value={extraData[field.fieldName] ?? ''} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500">
+                        <option value="">선택하세요</option>
+                        {field.options?.split(',').map((opt: string) => <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>)}
+                      </select>
                     ) : field.inputType === 'radio' ? (
-                      <div className="flex flex-wrap gap-4 pt-1">{field.options?.split(',').map((opt: string) => { const value = opt.trim(); return <label key={value} className="flex items-center gap-2 cursor-pointer text-sm"><input type="radio" name={`extra-${field.fieldName}`} value={value} checked={extraData[field.fieldName] === value} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-4 h-4 text-blue-600" />{value}</label>; })}</div>
+                      <div className="flex flex-wrap gap-4 pt-1">{field.options?.split(',').map((opt: string) => {
+                        const value = opt.trim();
+                        return <label key={value} className="flex items-center gap-2 cursor-pointer text-sm"><input type="radio" name={`extra-${field.fieldName}`} value={value} checked={extraData[field.fieldName] === value} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-4 h-4 text-blue-600" />{value}</label>;
+                      })}</div>
                     ) : field.inputType === 'checkbox' ? (
-                      <div className="flex flex-wrap gap-4 pt-1">{field.options?.split(',').map((opt: string) => { const value = opt.trim(); return <label key={value} className="flex items-center gap-2 cursor-pointer text-sm"><input type="checkbox" value={value} checked={(Array.isArray(extraData[field.fieldName]) ? extraData[field.fieldName] : []).includes(value)} onChange={(e) => handleCheckboxChange(field.fieldName, value, e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />{value}</label>; })}</div>
+                      <div className="flex flex-wrap gap-4 pt-1">{field.options?.split(',').map((opt: string) => {
+                        const value = opt.trim();
+                        return <label key={value} className="flex items-center gap-2 cursor-pointer text-sm"><input type="checkbox" value={value} checked={(Array.isArray(extraData[field.fieldName]) ? extraData[field.fieldName] : []).includes(value)} onChange={(e) => handleCheckboxChange(field.fieldName, value, e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />{value}</label>;
+                      })}</div>
                     ) : null}
                   </div>
                 ))}
