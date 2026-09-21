@@ -145,7 +145,7 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
                         {totalCount - ((page - 1) * listCount) - index}
                       </td>
                       <td className="py-4 px-6">
-                        <Link href={`/boards/${boardId}/${post.id}`} className="flex items-center text-slate-800 group-hover:text-blue-600 font-medium transition-colors">
+                        <Link href={`/support/boards/${boardId}/${post.id}`} className="flex items-center text-slate-800 group-hover:text-blue-600 font-medium transition-colors">
                           {post.isNotice && <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600 mr-2 shrink-0">공지</span>}
                           {post.category && <span className="text-slate-400 font-bold mr-2 shrink-0">[{post.category}]</span>}
                           <span className="truncate">{post.title}</span>
@@ -164,7 +164,7 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
             <ul className="block md:hidden divide-y divide-slate-100">
               {posts.map((post: any, index: number) => (
                 <li key={post.id} className="p-4 hover:bg-slate-50 transition-colors">
-                  <Link href={`/boards/${boardId}/${post.id}`} className="block">
+                  <Link href={`/support/boards/${boardId}/${post.id}`} className="block">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs font-bold text-slate-400 shrink-0">
                         {totalCount - ((page - 1) * listCount) - index}
@@ -189,7 +189,7 @@ export default function BoardListClient({ boardId, boardConfig, initialPosts, in
         {boardType === 'GALLERY' && (
           <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {posts.map((post: any) => (
-              <Link key={post.id} href={`/boards/${boardId}/${post.id}`} className="group flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all">
+              <Link key={post.id} href={`/support/boards/${boardId}/${post.id}`} className="group flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all">
                 <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
                   {post.thumbnailUrl ? <img src={post.thumbnailUrl} className="w-full h-full object-cover transition-transform group-hover:scale-105" /> : <div className="w-full h-full flex items-center justify-center text-slate-400">No Image</div>}
                 </div>
