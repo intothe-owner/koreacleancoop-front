@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { 
-  Settings, Users, UserCheck, Menu as MenuIcon, 
+import {
+  Settings, Users, UserCheck, Menu as MenuIcon,
   FileText, MessageSquare, LogOut, UserCircle, Loader2, Megaphone,
   BarChart2, Building2, ChevronDown, Award, Users2, TrendingUp, HeartHandshake,
   ClipboardList
@@ -14,9 +14,9 @@ import { usePathname } from "next/navigation";
 import Script from "next/script";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname(); 
+  const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [adminInfo, setAdminInfo] = useState({ id: 0,name: "", level: 0 });
+  const [adminInfo, setAdminInfo] = useState({ id: 0, name: "", level: 0 });
 
   // 💡 '협동조합' 아코디언 메뉴 열림/닫힘 상태 관리
   const [isCoopOpen, setIsCoopOpen] = useState(false);
@@ -24,7 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
-    
+
 
     if (!token || !userStr) {
       alert("관리자 페이지입니다. 먼저 로그인해 주세요.");
@@ -50,9 +50,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // 현재 경로가 협동조합 하위 메뉴 중 하나라면 자동으로 아코디언을 열어줌
   useEffect(() => {
-    if (pathname.startsWith("/admin/certification")) {
+    if (pathname.startsWith("/admin/certification") ||
+      pathname.startsWith("/admin/customers")||
+      pathname.startsWith("/admin/social-contributions")
+      ) {
       setIsCoopOpen(true);
-    }
+    } 
   }, [pathname]);
 
   const handleLogout = () => {
@@ -78,8 +81,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-800">
-      
-      <TokenChecker /> 
+
+      <TokenChecker />
       <aside className="w-64 bg-slate-900 flex flex-col h-full flex-shrink-0 shadow-2xl z-20">
         <div className="h-16 flex items-center justify-center bg-slate-950 border-b border-slate-800 shadow-sm flex-shrink-0">
           <Link href="/admin/dashboard" className="text-xl font-black text-white tracking-widest hover:text-indigo-400 transition-colors">
@@ -89,7 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           <p className="px-3 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">환경 설정</p>
-          
+
           <Link href="/admin/settings" className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-300 hover:bg-indigo-600 hover:text-white transition-all">
             <Settings size={18} />
             <span className="font-medium text-sm">사이트 설정</span>
@@ -102,19 +105,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="my-6 border-t border-slate-800" />
 
           <p className="px-3 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">컨텐츠 관리</p>
-          
+
           <Link href="/admin/member" className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-300 hover:bg-indigo-600 hover:text-white transition-all">
             <UserCheck size={18} />
             <span className="font-medium text-sm">회원 관리</span>
           </Link>
           {adminInfo.id === 2 && (
-            <Link 
-              href="/admin/qualifications" 
-              className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
-                pathname.startsWith('/admin/qualifications') 
-                  ? 'bg-indigo-600 text-white' 
+            <Link
+              href="/admin/qualifications"
+              className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${pathname.startsWith('/admin/qualifications')
+                  ? 'bg-indigo-600 text-white'
                   : 'text-slate-300 hover:bg-indigo-600 hover:text-white'
-              }`}
+                }`}
             >
               <ClipboardList size={18} />
               <span className="font-medium text-sm">에어컨세척자격증</span>
@@ -123,7 +125,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* 💡 [신규] 협동조합 관리 아코디언 메뉴 */}
           <div>
-            <button 
+            <button
               onClick={() => setIsCoopOpen(!isCoopOpen)}
               className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-slate-300 hover:bg-indigo-600 hover:text-white transition-all"
             >
@@ -137,30 +139,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* 아코디언 펼쳐졌을 때 나오는 서브메뉴 목록 */}
             {isCoopOpen && (
               <div className="pl-4 py-1 space-y-1 mt-1 border-l-2 border-indigo-600 ml-4">
-                <Link 
-                  href="/admin/certification" 
+                <Link
+                  href="/admin/certification"
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${pathname === '/admin/certification' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                 >
                   <Award size={14} />
                   <span>인증·인허가</span>
                 </Link>
-                <Link 
-                  href="/admin/coopmembers" 
+                <Link
+                  href="/admin/coopmembers"
                   className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
                 >
                   <Users2 size={14} />
                   <span>조합원현황</span>
                 </Link>
-                <Link 
-                  href="#" 
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                <Link
+                  href="/admin/customers"
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${pathname === '/admin/customers'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
                 >
                   <TrendingUp size={14} />
                   <span>주요실적/고객현황</span>
                 </Link>
-                <Link 
-                  href="#" 
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                <Link
+                  href="/admin/social-contributions"
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    pathname.startsWith('/admin/social-contributions')
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
                 >
                   <HeartHandshake size={14} />
                   <span>사회적공헌활동</span>

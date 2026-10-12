@@ -7,6 +7,8 @@ import MainSlider from "@/components/main/MainSlider";
 import TabMenu from "@/components/main/TabMenu";
 import CertificationList from "@/components/main/CertificationList";
 import CoopMemberList from "@/components/main/CoopMemberList";
+import CustomerAchievementList from "@/components/main/CustomerAchievementList";
+import SocialContributionList from "@/components/main/SocialContributionList";
 
 // 1. 데이터 페칭 함수 정의
 const fetchNestedPageData = async (targetId: string) => {
@@ -23,6 +25,7 @@ const fetchMenus = async () => {
 };
 
 export default function NestedSubPage() {
+  console.log('서브메뉴');
   // 💡 useParams를 통해 id와 secondId를 가져옵니다.
   const params = useParams<{ id: string; secondId: string }>();
   const id = params?.id;
@@ -91,6 +94,8 @@ export default function NestedSubPage() {
       <TabMenu allMenus={allMenus} currentMenuId={pageData.menuId} />
       {secondId === "cert" && <CertificationList />}
       {secondId === "members" && <CoopMemberList />}
+      {secondId === "customers" && <CustomerAchievementList />}
+      {secondId === "social-contributions" && <SocialContributionList />}
       {/* 5. 본문 렌더링 */}
       {pageData.contentBlocks && pageData.contentBlocks.length > 0 && (
         <div className="mt-8">
