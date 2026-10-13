@@ -216,7 +216,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                   </a>
 
                   {menu.children && menu.children.length > 0 && openDropdownId === menu.id && (
-                    <div className="absolute top-[60px] left-1/2 -translate-x-1/2 min-w-[160px] z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
+                    <div className="absolute top-[60px] left-1/2 -translate-x-1/2 min-w-[160px] z-9999 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
                       {menu.children.map((child) => (
                         <a
                           key={child.id}
