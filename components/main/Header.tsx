@@ -119,9 +119,9 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
           <a href="/support/boards/notice" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
             고객지원
           </a>
-          <a href="/contact" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
+          {/* <a href="/contact" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
             제휴문의
-          </a>
+          </a> */}
 
           {isLoggedIn ? (
             <div
