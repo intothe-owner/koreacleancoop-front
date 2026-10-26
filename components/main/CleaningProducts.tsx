@@ -41,9 +41,10 @@ export default function CleaningProducts() {
   }, [activeMenu]);
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 bg-gray-50 flex flex-col md:flex-row-reverse gap-6 md:gap-8">
+    // 배경색 제거, max-w-7xl 제거, 전체 넓이(w-full) 적용 및 flex-row-reverse로 우측 밀착
+    <div className="w-full p-4 md:p-6 lg:p-8 flex flex-col md:flex-row-reverse gap-6 md:gap-12">
       
-      {/* 우측 사이드바 */}
+      {/* 우측 사이드바 (화면 맨 끝에 위치) */}
       <div className="w-full md:w-64 lg:w-72 shrink-0 z-10">
         <div className="bg-white md:rounded-2xl md:shadow-md p-3 md:p-6 sticky top-0 md:top-8 -mx-4 md:mx-0 px-4 md:px-6">
           <h2 className="hidden md:block text-lg font-bold text-gray-800 mb-4 pb-3">상세메뉴</h2>
@@ -72,7 +73,7 @@ export default function CleaningProducts() {
         </div>
       </div>
 
-      {/* 좌측 상품 리스트 */}
+      {/* 좌측 상품 리스트 (flex-1로 남은 공간을 모두 차지하며 사이드바를 우측으로 밀어냄) */}
       <div className="flex-1">
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">{activeMenu.name}</h1>
         
@@ -81,7 +82,7 @@ export default function CleaningProducts() {
             <span className="text-gray-500 font-medium">상품 정보를 불러오는 중입니다...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {products.map((product, idx) => (
               <a 
                 key={idx} 
