@@ -87,6 +87,7 @@ export default function SubPage() {
           <BlockRenderer blocks={pageData.contentBlocks} />
         </div>
       )}
+      {id}
     </div>
   );
 }
