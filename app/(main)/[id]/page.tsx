@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import BlockRenderer from "@/components/main/BlockRenderer";
 import MainSlider from "@/components/main/MainSlider";
 import TabMenu from "@/components/main/TabMenu";
+import CleaningProducts from "@/components/main/CleaningProducts";
 
 // 💡 API 통신 함수들을 밖으로 분리
 const fetchSubPageData = async (id: string) => {
@@ -87,7 +88,7 @@ export default function SubPage() {
           <BlockRenderer blocks={pageData.contentBlocks} />
         </div>
       )}
-      {id}
+      {id==='shop'?<CleaningProducts/>:null}
     </div>
   );
 }
