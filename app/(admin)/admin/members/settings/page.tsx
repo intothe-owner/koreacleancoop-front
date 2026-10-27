@@ -13,6 +13,7 @@ export default function MemberSettingsPage() {
     usePhone: false,
     useMobile: true,
     useAddress: false,
+    useLocation: false, // ✨ 신규 추가 (위치/좌표 저장 사용 여부)
     useDob: false,
 
     // 승인제 관련 상태
@@ -60,6 +61,7 @@ export default function MemberSettingsPage() {
             usePhone: Boolean(json.data.usePhone),
             useMobile: Boolean(json.data.useMobile),
             useAddress: Boolean(json.data.useAddress),
+            useLocation: Boolean(json.data.useLocation),
             useDob: Boolean(json.data.useDob),
 
             useApproval: Boolean(json.data.useApproval),
