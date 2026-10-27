@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import Script from "next/script"; // 💡 다음 우편번호 API 로드를 위해 추가
+import Script from "next/script";
 
 interface RegisterFormProps {
   settings: any;
@@ -29,10 +29,12 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
     phone: "",
     dob: "",
     companyName: "",
-    // 💡 주소 관련 상태 추가
+    // 주소 및 위치 좌표 관련 상태
     postcode: "",
     address: "",
-    address_detail: ""
+    address_detail: "",
+    latitude: "",
+    longitude: ""
   });
 
   const [approvalFile, setApprovalFile] = useState<File | null>(null);
@@ -63,7 +65,7 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
     setMemberType(type);
   };
 
-  // 💡 다음 우편번호 검색 팝업 열기
+  // 다음 우편번호 검색 팝업 열기 및 좌표 변환
   const openPostcode = () => {
     if (typeof window === "undefined" || !(window as any).daum) {
       setErrorMessage("우편번호 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
@@ -72,15 +74,29 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
 
     new (window as any).daum.Postcode({
       oncomplete: (data: any) => {
-        // 검색 결과 항목을 클릭했을때 실행할 코드를 작성하는 부분.
+        const fullAddress = data.address;
+
         setFormData((prev) => ({
           ...prev,
-          postcode: data.zonecode, // 우편번호 (5자리)
-          address: data.address, // 기본 주소
+          postcode: data.zonecode,
+          address: fullAddress,
         }));
         clearMessages();
         
-        // 상세주소 입력 칸으로 포커스 자동 이동
+        // 카카오 Geocoder로 좌표 변환 (settings.useLocation이 true일 때만)
+        if (settings?.useLocation && (window as any).kakao && (window as any).kakao.maps.services) {
+          const geocoder = new (window as any).kakao.maps.services.Geocoder();
+          geocoder.addressSearch(fullAddress, (result: any, status: any) => {
+            if (status === (window as any).kakao.maps.services.Status.OK) {
+              setFormData((prev) => ({
+                ...prev,
+                latitude: result[0].y,
+                longitude: result[0].x,
+              }));
+            }
+          });
+        }
+        
         const detailInput = document.querySelector('input[name="address_detail"]') as HTMLInputElement;
         if (detailInput) {
           detailInput.focus();
@@ -89,7 +105,6 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
     }).open();
   };
 
-  // 💡 회원가입 뮤테이션 정의
   const registerMutation = useMutation({
     mutationFn: async (submitData: FormData) => {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/register`, {
@@ -125,7 +140,6 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
       return setErrorMessage("승인을 위한 증빙서류를 첨부해 주세요.");
     }
 
-    // 💡 주소 사용 시 필수값 체크
     if (settings?.useAddress) {
       if (!formData.postcode || !formData.address) {
         return setErrorMessage("우편번호 및 기본 주소를 입력해 주세요.");
@@ -153,11 +167,16 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
     if (settings?.usePhone) submitData.append("phone", formData.phone);
     if (settings?.useDob) submitData.append("dob", formData.dob);
     
-    // 💡 폼 데이터에 주소 필드들 추가
+    // 주소 및 좌표 필드 추가
     if (settings?.useAddress) {
       submitData.append("postcode", formData.postcode);
       submitData.append("address", formData.address);
       submitData.append("address_detail", formData.address_detail);
+      
+      if (settings?.useLocation) {
+        submitData.append("latitude", formData.latitude);
+        submitData.append("longitude", formData.longitude);
+      }
     }
 
     if (memberType === "NORMAL" && settings?.useNickname) {
@@ -179,8 +198,20 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
 
   return (
     <>
-      {/* 💡 다음 우편번호 API 스크립트 로드 */}
       <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="lazyOnload" />
+      
+      {/* 설정에서 위치 기반 사용(useLocation)을 켰을 때만 카카오 맵 API 로드 */}
+      {settings?.useLocation && (
+        <Script 
+          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&libraries=services&autoload=false`} 
+          strategy="lazyOnload"
+          onLoad={() => {
+            if ((window as any).kakao && (window as any).kakao.maps) {
+              (window as any).kakao.maps.load(() => {});
+            }
+          }}
+        />
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl mb-6">
@@ -287,7 +318,6 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
           </div>
         )}
 
-        {/* 💡 주소 입력 폼 렌더링 (postcode, address, address_detail 적용) */}
         {settings?.useAddress && (
           <div className="space-y-3">
             <label className={labelClass}>주소 <span className="text-red-500">*</span></label>
@@ -326,6 +356,13 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
               className={inputClass} 
               placeholder="상세 주소를 입력해주세요" 
             />
+
+            {/* 변환된 좌표가 있을 경우 히든 텍스트로 노출하거나 숨겨둠 */}
+            {settings?.useLocation && formData.latitude && formData.longitude && (
+              <div className="text-xs text-slate-400 font-mono pl-1">
+                좌표 수집 완료 (Lat: {formData.latitude}, Lng: {formData.longitude})
+              </div>
+            )}
           </div>
         )}
 
