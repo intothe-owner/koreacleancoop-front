@@ -60,8 +60,7 @@ export default function SubPage() {
 
   return (
     <div className={`w-full flex flex-col ${hasSlider || meta.bgImage ? '' : 'pt-24'}`}>
-      <Script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="beforeInteractive" />
-        <Script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=4d9d95847299b1da4cdded36a9489989&libraries=services&autoload=false" strategy="beforeInteractive" />
+      
       {/* 1. 슬라이드 */}
       {hasSlider && <MainSlider slides={pageData.sliderData} />}
       
