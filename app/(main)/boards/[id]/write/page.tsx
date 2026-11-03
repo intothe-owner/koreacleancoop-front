@@ -1,0 +1,396 @@
+// src/app/(main)/boards/[id]/write/page.tsx
+'use client';
+
+import { useState, use, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import CustomEditor from '@/components/main/CustomEditor';
+
+export default function PostWritePage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const resolvedParams = use(params);
+  const boardId = resolvedParams.id;
+
+  const [boardConfig, setBoardConfig] = useState<any>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+  const [extraData, setExtraData] = useState<Record<string, any>>({});
+  
+  const [content, setContent] = useState('');
+  const [editorFiles, setEditorFiles] = useState<{ file: File, id: string }[]>([]);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 💡 [추가] 캡차 관련 상태
+  const [captchaSvg, setCaptchaSvg] = useState<string>('');
+  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [captchaInput, setCaptchaInput] = useState<string>('');
+
+  // 💡 [추가] 캡차 불러오기 함수
+  const loadCaptcha = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/boards/captcha`);
+      const data = await res.json();
+      if (data.success) {
+        setCaptchaSvg(data.svg);
+        setCaptchaToken(data.token);
+        setCaptchaInput(''); // 입력창 초기화
+      }
+    } catch (error) {
+      console.error("캡차를 불러오지 못했습니다.", error);
+    }
+  };
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    let currentLevel = 1;
+    
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      currentLevel = user.level;
+      setIsLoggedIn(true);
+      setUserData(user);
+    } else {
+      // 💡 [추가] 비회원일 경우 컴포넌트 마운트 시 캡차 로드
+      loadCaptcha();
+    }
+
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/board-configs/${boardId}`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.success) {
+          if (currentLevel < json.data.writeLevel) {
+            alert('글쓰기 권한이 없습니다.');
+            router.push(`/boards/${boardId}`);
+            return;
+          }
+          setBoardConfig(json.data);
+        }
+      });
+  }, [boardId, router]);
+
+  // 글 작성 뮤테이션 정의
+  const writeMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/boards/${boardId}/posts`, {
+        method: 'POST', 
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || '게시글 등록에 실패했습니다.');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boardPosts', boardId] });
+      router.push(`/boards/${boardId}`);
+      router.refresh();
+    },
+    onError: (error: any) => {
+      alert(error.message || '서버 오류가 발생했습니다.');
+      // 💡 [추가] 서버에서 캡차가 틀렸다고 에러를 보냈을 경우 캡차 새로고침
+      if (!isLoggedIn && error.message?.includes('자동등록방지')) {
+        loadCaptcha();
+      }
+    }
+  });
+
+  const handleEditorImageAttach = (file: File, id: string) => {
+    setEditorFiles(prev => [...prev, { file, id }]);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(Array.from(e.target.files));
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const addFiles = (newFiles: File[]) => {
+    setFiles(prev => {
+      const totalFiles = [...prev, ...newFiles];
+      if (totalFiles.length > boardConfig.fileUploadCount) {
+        alert(`첨부파일은 최대 ${boardConfig.fileUploadCount}개까지만 업로드 가능합니다.`);
+        return totalFiles.slice(0, boardConfig.fileUploadCount);
+      }
+      return totalFiles;
+    });
+  };
+
+  const removeFile = (indexToRemove: number) => {
+    setFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleCheckboxChange = (name: string, value: string, checked: boolean) => {
+    setExtraData(prev => {
+      const current = prev[name] || [];
+      if (checked) return { ...prev, [name]: [...current, value] };
+      else return { ...prev, [name]: current.filter((v: string) => v !== value) };
+    });
+  };
+
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    const pureText = content.replace(/<[^>]*>?/gm, '').trim();
+    if (!content.includes('<img') && pureText === '') {
+      alert('내용을 입력해주세요.');
+      return;
+    }
+
+    const formData = new FormData(e.currentTarget);
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    const imgs = tempDiv.querySelectorAll('img[data-file-id]');
+    
+    imgs.forEach(img => {
+      const id = img.getAttribute('data-file-id');
+      img.setAttribute('src', `cid:${id}`);
+      img.removeAttribute('data-file-id');
+    });
+    
+    formData.set('content', tempDiv.innerHTML);
+
+    editorFiles.forEach(ef => {
+      const ext = ef.file.name.split('.').pop();
+      formData.append('editorImages', ef.file, `${ef.id}.${ext}`);
+    });
+
+    files.forEach(file => { if (file) formData.append('attachments', file); });
+    
+    if (Object.keys(extraData).length > 0) formData.append('extraData', JSON.stringify(extraData));
+    
+    // 💡 [수정] 캡차 데이터 Append
+    if (isLoggedIn && userData) {
+      formData.append('memberId', userData.id);
+    } else {
+      if (!captchaInput.trim()) {
+        alert('자동등록방지 문자를 입력해주세요.');
+        return;
+      }
+      formData.append('captchaInput', captchaInput);
+      formData.append('captchaToken', captchaToken);
+    }
+
+    writeMutation.mutate(formData);
+  };
+
+  if (!boardConfig) return <div className="w-full text-center pt-32 text-slate-500 font-medium">로딩 중...</div>;
+
+  const categories = boardConfig.categories ? boardConfig.categories.split(',').map((c: string) => c.trim()) : [];
+  const extraFields = boardConfig.extraFields || [];
+  return (
+    <div className="w-full flex flex-col pt-24 pb-24 bg-slate-50/50 min-h-screen">
+      <div className="max-w-4xl mx-auto px-4 w-full">
+        <div className="mb-8">
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{boardConfig.boardName} 글 작성</h1>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-10">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {categories.length > 0 && (
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-700">카테고리</label>
+                  <select name="category" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                    <option value="">카테고리 선택</option>
+                    {categories.map((cat: string) => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                </div>
+              )}
+              {!isLoggedIn ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">작성자 *</label>
+                    <input type="text" name="writerName" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">비밀번호 *</label>
+                    <input type="password" name="password" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                  </div>
+                  
+                 
+                </>
+              ) : (
+                <input type="hidden" name="writerName" value={userData?.name || '회원'} />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">제목 *</label>
+              <input type="text" name="title" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">내용 *</label>
+              {boardConfig.useEditor ? (
+                <CustomEditor 
+                  value={content} 
+                  onChange={setContent} 
+                  onImageAttach={handleEditorImageAttach}
+                  placeholder="자유롭게 내용을 작성해주세요." 
+                />
+              ) : (
+                <textarea 
+                  name="content" 
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  required 
+                  rows={12} 
+                  className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none leading-relaxed"
+                />
+              )}
+            </div>
+            {boardConfig.useExtraFields && extraFields.length > 0 && (
+              <div className="p-6 bg-slate-50/50 border border-slate-200 rounded-xl space-y-6">
+                <h3 className="font-bold text-slate-800 text-sm border-b border-slate-200 pb-2 mb-4">추가 정보 입력</h3>
+                {extraFields.map((field: any, idx: number) => (
+                  <div key={idx} className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">{field.fieldName}</label>
+                    {['text', 'number', 'url', 'email'].includes(field.inputType) ? (
+                      <input 
+                        type={field.inputType} 
+                        value={extraData[field.fieldName] || ''} 
+                        onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500" 
+                      />
+                    ) : field.inputType === 'select' ? (
+                      <select 
+                        value={extraData[field.fieldName] || ''} 
+                        onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                      >
+                        <option value="">선택하세요</option>
+                        {field.options?.split(',').map((opt: string) => <option key={opt} value={opt.trim()}>{opt.trim()}</option>)}
+                      </select>
+                    ) : field.inputType === 'radio' ? (
+                      <div className="flex flex-wrap gap-4 pt-1">
+                        {field.options?.split(',').map((opt: string) => (
+                          <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="radio" name={field.fieldName} value={opt.trim()} checked={extraData[field.fieldName] === opt.trim()} onChange={(e) => setExtraData(prev => ({ ...prev, [field.fieldName]: e.target.value }))} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                            {opt.trim()}
+                          </label>
+                        ))}
+                      </div>
+                    ) : field.inputType === 'checkbox' ? (
+                      <div className="flex flex-wrap gap-4 pt-1">
+                        {field.options?.split(',').map((opt: string) => (
+                          <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="checkbox" value={opt.trim()} checked={(extraData[field.fieldName] || []).includes(opt.trim())} onChange={(e) => handleCheckboxChange(field.fieldName, opt.trim(), e.target.checked)} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                            {opt.trim()}
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {boardConfig.fileUploadCount > 0 && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-end">
+                  <label className="text-sm font-bold text-slate-700">첨부파일</label>
+                  <span className="text-xs text-slate-500">({files.length} / {boardConfig.fileUploadCount}개)</span>
+                </div>
+                
+                <div 
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl transition-colors cursor-pointer ${isDragging ? 'border-blue-500 bg-blue-50/50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'}`}
+                >
+                  <p className="text-sm text-slate-600 font-medium">클릭하거나 파일을 이곳으로 드래그 하세요.</p>
+                  <input type="file" multiple ref={fileInputRef} onChange={handleFileInputChange} className="hidden" />
+                </div>
+
+                {files.length > 0 && (
+                  <ul className="mt-3 space-y-2">
+                    {files.map((file, index) => (
+                      <li key={index} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
+                        <span className="text-sm text-slate-700 truncate">{file.name}</span>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); removeFile(index); }} className="text-red-500 text-sm font-medium px-2 py-1">삭제</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            {/* 💡 [추가] 비회원 캡차 UI 영역 */}
+            {!isLoggedIn ? (
+              <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-slate-700">자동등록방지 (Captcha) *</label>
+                    <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      {captchaSvg ? (
+                        <div 
+                          className="cursor-pointer bg-white border border-slate-200 rounded-lg overflow-hidden flex-shrink-0" 
+                          onClick={loadCaptcha}
+                          title="클릭하여 새로고침"
+                          dangerouslySetInnerHTML={{ __html: captchaSvg }} 
+                        />
+                      ) : (
+                        <div className="w-[120px] h-[40px] flex items-center justify-center bg-white border border-slate-200 rounded-lg text-sm text-slate-500">
+                          로딩중...
+                        </div>
+                      )}
+                      <input 
+                        type="text" 
+                        value={captchaInput}
+                        onChange={(e) => setCaptchaInput(e.target.value)}
+                        placeholder="왼쪽 문자 입력" 
+                        required={!isLoggedIn}
+                        className="flex-1 min-w-[150px] px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                      <button 
+                        type="button" 
+                        onClick={loadCaptcha}
+                        className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors"
+                        title="새로고침"
+                      >
+                        ↻
+                      </button>
+                    </div>
+                  </div>
+            ):null}
+
+            <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
+              <button type="button" onClick={() => router.back()} className="px-6 py-3 font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">취소</button>
+              <button type="submit" disabled={writeMutation.isPending} className="px-8 py-3 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50">등록 완료</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
