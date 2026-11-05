@@ -2,21 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, UserCog, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, UserCog, CheckCircle2, AlertCircle, X } from "lucide-react"; // ✨ X 아이콘 추가
 import Script from "next/script";
 
 export default function EditProfilePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetchingData, setIsFetchingData] = useState(true); // 초기 데이터 로딩 상태
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const [userData, setUserData] = useState<any>(null);
-  const [settings, setSettings] = useState<any>(null); // ✨ 관리자 설정 상태 추가
+  const [settings, setSettings] = useState<any>(null);
+  
+  const [isPostcodeOpen, setIsPostcodeOpen] = useState(false); // ✨ 레이어 팝업 상태 추가
 
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
   const [formData, setFormData] = useState({
-    password: "", // 빈 값이면 변경 안 함
+    password: "",
     passwordConfirm: "",
     name: "",
     nickname: "",
@@ -28,7 +30,6 @@ export default function EditProfilePage() {
     longitude: "",
   });
 
-  // 1. 초기 렌더링 시 내 정보 및 회원 설정 불러오기
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
@@ -55,7 +56,6 @@ export default function EditProfilePage() {
         longitude: user.longitude || "",
       }));
 
-      // ✨ 관리자 회원 설정 API 호출
       fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/member-settings`)
         .then((res) => res.json())
         .then((json) => {
@@ -76,40 +76,50 @@ export default function EditProfilePage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 다음 우편번호 검색 팝업
+  // ✨ 다음 우편번호 레이어 팝업 열기 및 좌표 변환
   const openPostcode = () => {
     if (typeof window === "undefined" || !(window as any).daum) {
       setErrorMessage("우편번호 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
       return;
     }
 
-    new (window as any).daum.Postcode({
-      oncomplete: (data: any) => {
-        const fullAddress = data.address;
-        setFormData((prev) => ({
-          ...prev,
-          postcode: data.zonecode,
-          address: fullAddress,
-        }));
-        
-        // ✨ 설정에서 useLocation이 켜져 있을 때만 좌표 변환 실행
-        if (settings?.useLocation && (window as any).kakao && (window as any).kakao.maps?.services) {
-          const geocoder = new (window as any).kakao.maps.services.Geocoder();
-          geocoder.addressSearch(fullAddress, (result: any, status: any) => {
-            if (status === (window as any).kakao.maps.services.Status.OK) {
-              setFormData((prev) => ({
-                ...prev,
-                latitude: result[0].y,
-                longitude: result[0].x,
-              }));
+    setIsPostcodeOpen(true); // 레이어 띄우기
+
+    setTimeout(() => {
+      const layer = document.getElementById("postcode-layer");
+      if (layer) {
+        new (window as any).daum.Postcode({
+          oncomplete: (data: any) => {
+            const fullAddress = data.address;
+            setFormData((prev) => ({
+              ...prev,
+              postcode: data.zonecode,
+              address: fullAddress,
+            }));
+            
+            setIsPostcodeOpen(false); // 검색 완료 시 닫기
+            
+            // 카카오 Geocoder로 좌표 변환
+            if (settings?.useLocation && (window as any).kakao && (window as any).kakao.maps?.services) {
+              const geocoder = new (window as any).kakao.maps.services.Geocoder();
+              geocoder.addressSearch(fullAddress, (result: any, status: any) => {
+                if (status === (window as any).kakao.maps.services.Status.OK) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    latitude: result[0].y,
+                    longitude: result[0].x,
+                  }));
+                }
+              });
             }
-          });
-        }
-      },
-    }).open();
+          },
+          width: "100%",
+          height: "100%",
+        }).embed(layer); // ✨ open() 대신 embed() 사용
+      }
+    }, 100);
   };
 
-  // 회원정보 수정 폼 제출
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
@@ -123,7 +133,6 @@ export default function EditProfilePage() {
     try {
       const token = localStorage.getItem("token");
       
-      // 제출할 데이터 구성 (설정에 맞춰 활성화된 데이터만 전송)
       const submitData: any = {};
       if (formData.password) submitData.password = formData.password;
       if (settings?.useName) submitData.name = formData.name;
@@ -158,7 +167,6 @@ export default function EditProfilePage() {
 
       setSuccessMessage("회원 정보가 성공적으로 수정되었습니다.");
       
-      // 로컬스토리지 정보 최신화 (Header 이름 갱신용)
       const updatedUser = { 
         ...userData, 
         ...(settings?.useName && { name: formData.name }),
@@ -178,7 +186,6 @@ export default function EditProfilePage() {
     }
   };
 
-  // 데이터 로딩 중 화면
   if (isFetchingData || !userData) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center bg-slate-50 dark:bg-slate-900">
@@ -194,7 +201,6 @@ export default function EditProfilePage() {
     <>
       <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="lazyOnload" />
       
-      {/* ✨ 설정에서 위치 기능(useLocation)을 켰을 때만 카카오 맵 API 로드 */}
       {settings?.useLocation && (
         <Script 
           src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&libraries=services&autoload=false`} 
@@ -221,7 +227,6 @@ export default function EditProfilePage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* 비밀번호 변경 구역 */}
             <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
               <div>
                 <label className={labelClass}>새 비밀번호</label>
@@ -233,7 +238,6 @@ export default function EditProfilePage() {
               </div>
             </div>
 
-            {/* ✨ 설정에 따라 동적으로 필드 노출 */}
             {settings?.useName && (
               <div>
                 <label className={labelClass}>이름 <span className="text-red-500">*</span></label>
@@ -280,6 +284,11 @@ export default function EditProfilePage() {
                   type="text" name="address_detail" value={formData.address_detail} onChange={handleChange} 
                   className={inputClass} placeholder="상세 주소를 입력해주세요" 
                 />
+                {settings?.useLocation && formData.latitude && formData.longitude && (
+                  <div className="text-xs text-slate-400 font-mono pl-1">
+                    좌표 수집 완료 (Lat: {formData.latitude}, Lng: {formData.longitude})
+                  </div>
+                )}
               </div>
             )}
 
@@ -317,6 +326,26 @@ export default function EditProfilePage() {
           </form>
         </div>
       </div>
+
+      {/* ✨ 우편번호 검색 레이어 팝업 UI */}
+      {isPostcodeOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+              <h3 className="font-bold text-slate-800 dark:text-white text-lg">우편번호 검색</h3>
+              <button 
+                type="button" 
+                onClick={() => setIsPostcodeOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200/50 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            {/* 다음 우편번호 iframe이 삽입될 타겟 엘리먼트 */}
+            <div id="postcode-layer" className="w-full h-[450px] bg-white dark:bg-slate-900"></div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

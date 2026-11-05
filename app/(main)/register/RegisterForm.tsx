@@ -1,9 +1,8 @@
-// src/app/register/RegisterForm.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, X } from "lucide-react"; // ✨ X 아이콘 추가
 import { useMutation } from "@tanstack/react-query";
 import Script from "next/script";
 
@@ -17,6 +16,7 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
   const [memberType, setMemberType] = useState<"NORMAL" | "UNION">("NORMAL");
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [isPostcodeOpen, setIsPostcodeOpen] = useState(false); // ✨ 레이어 팝업 상태 추가
 
   const [formData, setFormData] = useState({
     loginId: "",
@@ -29,7 +29,6 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
     phone: "",
     dob: "",
     companyName: "",
-    // 주소 및 위치 좌표 관련 상태
     postcode: "",
     address: "",
     address_detail: "",
@@ -65,44 +64,54 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
     setMemberType(type);
   };
 
-  // 다음 우편번호 검색 팝업 열기 및 좌표 변환
+  // ✨ 다음 우편번호 레이어 팝업 열기 및 좌표 변환
   const openPostcode = () => {
     if (typeof window === "undefined" || !(window as any).daum) {
       setErrorMessage("우편번호 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
       return;
     }
 
-    new (window as any).daum.Postcode({
-      oncomplete: (data: any) => {
-        const fullAddress = data.address;
+    setIsPostcodeOpen(true); // 레이어 띄우기
 
-        setFormData((prev) => ({
-          ...prev,
-          postcode: data.zonecode,
-          address: fullAddress,
-        }));
-        clearMessages();
-        
-        // 카카오 Geocoder로 좌표 변환 (settings.useLocation이 true일 때만)
-        if (settings?.useLocation && (window as any).kakao && (window as any).kakao.maps.services) {
-          const geocoder = new (window as any).kakao.maps.services.Geocoder();
-          geocoder.addressSearch(fullAddress, (result: any, status: any) => {
-            if (status === (window as any).kakao.maps.services.Status.OK) {
-              setFormData((prev) => ({
-                ...prev,
-                latitude: result[0].y,
-                longitude: result[0].x,
-              }));
+    setTimeout(() => {
+      const layer = document.getElementById("postcode-layer");
+      if (layer) {
+        new (window as any).daum.Postcode({
+          oncomplete: (data: any) => {
+            const fullAddress = data.address;
+
+            setFormData((prev) => ({
+              ...prev,
+              postcode: data.zonecode,
+              address: fullAddress,
+            }));
+            clearMessages();
+            setIsPostcodeOpen(false); // 검색 완료 시 레이어 닫기
+            
+            // 카카오 Geocoder로 좌표 변환
+            if (settings?.useLocation && (window as any).kakao && (window as any).kakao.maps.services) {
+              const geocoder = new (window as any).kakao.maps.services.Geocoder();
+              geocoder.addressSearch(fullAddress, (result: any, status: any) => {
+                if (status === (window as any).kakao.maps.services.Status.OK) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    latitude: result[0].y,
+                    longitude: result[0].x,
+                  }));
+                }
+              });
             }
-          });
-        }
-        
-        const detailInput = document.querySelector('input[name="address_detail"]') as HTMLInputElement;
-        if (detailInput) {
-          detailInput.focus();
-        }
-      },
-    }).open();
+            
+            const detailInput = document.querySelector('input[name="address_detail"]') as HTMLInputElement;
+            if (detailInput) {
+              detailInput.focus();
+            }
+          },
+          width: "100%",
+          height: "100%",
+        }).embed(layer); // ✨ open() 대신 embed() 사용
+      }
+    }, 100); // 팝업 UI가 렌더링될 수 있도록 약간의 딜레이
   };
 
   const registerMutation = useMutation({
@@ -135,17 +144,14 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
     if (formData.password !== formData.passwordConfirm) {
       return setErrorMessage("비밀번호가 일치하지 않습니다.");
     }
-
     if (memberType === "UNION" && !approvalFile) {
       return setErrorMessage("승인을 위한 증빙서류를 첨부해 주세요.");
     }
-
     if (settings?.useAddress) {
       if (!formData.postcode || !formData.address) {
         return setErrorMessage("우편번호 및 기본 주소를 입력해 주세요.");
       }
     }
-
     if (settings?.useTermsOfService && !agreeTerms) {
       return setErrorMessage("이용약관에 동의해 주세요.");
     }
@@ -167,7 +173,6 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
     if (settings?.usePhone) submitData.append("phone", formData.phone);
     if (settings?.useDob) submitData.append("dob", formData.dob);
     
-    // 주소 및 좌표 필드 추가
     if (settings?.useAddress) {
       submitData.append("postcode", formData.postcode);
       submitData.append("address", formData.address);
@@ -200,7 +205,6 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
     <>
       <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="lazyOnload" />
       
-      {/* 설정에서 위치 기반 사용(useLocation)을 켰을 때만 카카오 맵 API 로드 */}
       {settings?.useLocation && (
         <Script 
           src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&libraries=services&autoload=false`} 
@@ -293,11 +297,8 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
             <div>
               <label className={labelClass}>승인을 위한 증빙서류 (사업자등록증 등) <span className="text-red-500">*</span></label>
               <input 
-                type="file" 
-                required 
-                onChange={handleFileChange} 
-                className={`${inputClass} !p-2 bg-white dark:bg-slate-800`} 
-                accept=".jpg,.jpeg,.png,.pdf" 
+                type="file" required onChange={handleFileChange} 
+                className={`${inputClass} !p-2 bg-white dark:bg-slate-800`} accept=".jpg,.jpeg,.png,.pdf" 
               />
               <p className="text-xs text-slate-500 mt-1">파일 확장자: jpg, png, pdf 허용</p>
             </div>
@@ -321,43 +322,26 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
         {settings?.useAddress && (
           <div className="space-y-3">
             <label className={labelClass}>주소 <span className="text-red-500">*</span></label>
-            
             <div className="flex gap-2">
               <input 
-                type="text" 
-                name="postcode" 
-                value={formData.postcode} 
-                readOnly 
-                className={`${inputClass} flex-1 bg-slate-100 dark:bg-slate-700/50 cursor-not-allowed`} 
-                placeholder="우편번호" 
+                type="text" name="postcode" value={formData.postcode} readOnly 
+                className={`${inputClass} flex-1 bg-slate-100 dark:bg-slate-700/50 cursor-not-allowed`} placeholder="우편번호" 
               />
               <button 
-                type="button" 
-                onClick={openPostcode} 
+                type="button" onClick={openPostcode} 
                 className="px-4 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors whitespace-nowrap"
               >
                 우편번호 검색
               </button>
             </div>
-            
             <input 
-              type="text" 
-              name="address" 
-              value={formData.address} 
-              readOnly 
-              className={`${inputClass} bg-slate-100 dark:bg-slate-700/50 cursor-not-allowed`} 
-              placeholder="기본 주소" 
+              type="text" name="address" value={formData.address} readOnly 
+              className={`${inputClass} bg-slate-100 dark:bg-slate-700/50 cursor-not-allowed`} placeholder="기본 주소" 
             />
             <input 
-              type="text" 
-              name="address_detail" 
-              value={formData.address_detail} 
-              onChange={handleChange} 
-              className={inputClass} 
-              placeholder="상세 주소를 입력해주세요" 
+              type="text" name="address_detail" value={formData.address_detail} onChange={handleChange} 
+              className={inputClass} placeholder="상세 주소를 입력해주세요" 
             />
-
-            {/* 변환된 좌표가 있을 경우 히든 텍스트로 노출하거나 숨겨둠 */}
             {settings?.useLocation && formData.latitude && formData.longitude && (
               <div className="text-xs text-slate-400 font-mono pl-1">
                 좌표 수집 완료 (Lat: {formData.latitude}, Lng: {formData.longitude})
@@ -377,14 +361,10 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
                 />
                 <label className="flex items-center gap-2.5 cursor-pointer w-fit">
                   <input 
-                    type="checkbox" 
-                    checked={agreeTerms}
-                    onChange={(e) => { clearMessages(); setAgreeTerms(e.target.checked); }}
+                    type="checkbox" checked={agreeTerms} onChange={(e) => { clearMessages(); setAgreeTerms(e.target.checked); }}
                     className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" 
                   />
-                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    (필수) 이용약관에 동의합니다.
-                  </span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">(필수) 이용약관에 동의합니다.</span>
                 </label>
               </div>
             )}
@@ -398,14 +378,10 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
                 />
                 <label className="flex items-center gap-2.5 cursor-pointer w-fit">
                   <input 
-                    type="checkbox" 
-                    checked={agreePrivacy}
-                    onChange={(e) => { clearMessages(); setAgreePrivacy(e.target.checked); }}
+                    type="checkbox" checked={agreePrivacy} onChange={(e) => { clearMessages(); setAgreePrivacy(e.target.checked); }}
                     className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" 
                   />
-                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    (필수) 개인정보 수집 및 이용에 동의합니다.
-                  </span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">(필수) 개인정보 수집 및 이용에 동의합니다.</span>
                 </label>
               </div>
             )}
@@ -437,6 +413,26 @@ export default function RegisterForm({ settings }: RegisterFormProps) {
           </button>
         </div>
       </form>
+
+      {/* ✨ 우편번호 검색 레이어 팝업 UI */}
+      {isPostcodeOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+              <h3 className="font-bold text-slate-800 dark:text-white text-lg">우편번호 검색</h3>
+              <button 
+                type="button" 
+                onClick={() => setIsPostcodeOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200/50 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            {/* 다음 우편번호 iframe이 삽입될 타겟 엘리먼트 */}
+            <div id="postcode-layer" className="w-full h-[450px] bg-white dark:bg-slate-900"></div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
