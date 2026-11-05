@@ -119,9 +119,13 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
           <a href="/support/boards/notice" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
             고객지원
           </a>
-          {/* <a href="/contact" className={`text-[12px] font-medium whitespace-nowrap ${topBarTextClasses}`}>
-            제휴문의
-          </a> */}
+          
+          {/* 🌟 비회원일 때만 견적문의조회 메뉴 노출 */}
+          {!isLoggedIn && (
+            <a href="/guest-quote" className={`text-[12px] font-medium whitespace-nowrap text-emerald-400 hover:text-emerald-300 transition-colors drop-shadow-sm`}>
+              견적문의조회
+            </a>
+          )}
 
           {isLoggedIn ? (
             <div
@@ -222,7 +226,7 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                   </a>
 
                   {menu.children && menu.children.length > 0 && openDropdownId === menu.id && (
-                    <div className="absolute top-[60px] left-1/2 -translate-x-1/2 min-w-[160px] z-9999 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
+                    <div className="absolute top-[60px] left-1/2 -translate-x-1/2 min-w-[160px] z-[9999] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 animate-in fade-in slide-in-from-top-2">
                       {menu.children.map((child) => (
                         <a
                           key={child.id}
@@ -322,13 +326,13 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                 >
                   고객지원
                 </a>
-                <a
+                {/* <a
                   href="/contact"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="py-2.5 text-center text-sm font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
                 >
                   제휴문의
-                </a>
+                </a> */}
               </div>
 
               {userData?.level >= 9 && (
@@ -372,12 +376,13 @@ export default function Header({ menus, logoUrl, siteName, hasSlider = true, mem
                   >
                     고객지원
                   </a>
+                  {/* 🌟 모바일 비회원 견적문의조회 추가 */}
                   <a
-                    href="/contact"
+                    href="/guest-quote"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="py-2.5 text-center text-sm font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition"
+                    className="py-2.5 text-center text-sm font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition"
                   >
-                    제휴문의
+                    견적문의조회
                   </a>
                 </div>
 

@@ -175,7 +175,7 @@ export default function EditProfilePage() {
       localStorage.setItem("user", JSON.stringify(updatedUser));
       
       setTimeout(() => {
-        router.push("/mypage");
+        router.push("/");
         router.refresh();
       }, 1500);
 
