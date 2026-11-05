@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import ClientLayoutWrapper from "./ClientLayoutWrapper";
 import { ThemeProvider } from "@/components/ThemeProvider"; // 경로에 맞게 수정
 import TokenChecker from "@/components/TokenChecker"; // 💡 추가: 방금 만든 TokenChecker 임포트
-import Script from "next/script";
+
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
@@ -89,12 +89,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   return (
     <>
-      {/* 🌟 다음 우편번호 및 카카오맵 스크립트를 전역 레이아웃에서 로드 */}
-      <Script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
-      <Script 
-        src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&libraries=services&autoload=false`} 
-        strategy="afterInteractive" 
-      />
+     
 
       <ThemeProvider
         attribute="class" // (권장) TailwindCSS의 dark 클래스와 연동하기 위함
