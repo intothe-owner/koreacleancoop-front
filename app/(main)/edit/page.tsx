@@ -8,13 +8,15 @@ import Script from "next/script";
 export default function EditProfilePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(true); // 초기 데이터 로딩 상태
   const [userData, setUserData] = useState<any>(null);
+  const [settings, setSettings] = useState<any>(null); // ✨ 관리자 설정 상태 추가
 
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
   const [formData, setFormData] = useState({
-    password: "", // 빈 값이면 변경 안 함 (백엔드 로직 대응)
+    password: "", // 빈 값이면 변경 안 함
     passwordConfirm: "",
     name: "",
     nickname: "",
@@ -26,7 +28,7 @@ export default function EditProfilePage() {
     longitude: "",
   });
 
-  // 1. 초기 렌더링 시 로컬스토리지에서 내 정보 불러오기
+  // 1. 초기 렌더링 시 내 정보 및 회원 설정 불러오기
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
@@ -41,7 +43,6 @@ export default function EditProfilePage() {
       const user = JSON.parse(userStr);
       setUserData(user);
       
-      // 폼에 기존 정보 세팅 (토큰 정보나 /api/auth/me API를 호출해서 최신 정보를 불러오는 것도 좋습니다)
       setFormData((prev) => ({
         ...prev,
         name: user.name || "",
@@ -50,7 +51,20 @@ export default function EditProfilePage() {
         postcode: user.postcode || "",
         address: user.address || "",
         address_detail: user.address_detail || "",
+        latitude: user.latitude || "",
+        longitude: user.longitude || "",
       }));
+
+      // ✨ 관리자 회원 설정 API 호출
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/member-settings`)
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success) {
+            setSettings(json.data);
+          }
+        })
+        .finally(() => setIsFetchingData(false));
+
     } catch (e) {
       router.push("/login");
     }
@@ -78,8 +92,8 @@ export default function EditProfilePage() {
           address: fullAddress,
         }));
         
-        // 카카오 Geocoder로 좌표 변환
-        if ((window as any).kakao && (window as any).kakao.maps?.services) {
+        // ✨ 설정에서 useLocation이 켜져 있을 때만 좌표 변환 실행
+        if (settings?.useLocation && (window as any).kakao && (window as any).kakao.maps?.services) {
           const geocoder = new (window as any).kakao.maps.services.Geocoder();
           geocoder.addressSearch(fullAddress, (result: any, status: any) => {
             if (status === (window as any).kakao.maps.services.Status.OK) {
@@ -108,24 +122,32 @@ export default function EditProfilePage() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem("token");
-      // 백엔드 라우터 경로에 맞게 호출 (예: /api/members/:id)
+      
+      // 제출할 데이터 구성 (설정에 맞춰 활성화된 데이터만 전송)
+      const submitData: any = {};
+      if (formData.password) submitData.password = formData.password;
+      if (settings?.useName) submitData.name = formData.name;
+      if (settings?.useNickname) submitData.nickname = formData.nickname;
+      if (settings?.useMobile) submitData.mobile = formData.mobile;
+      
+      if (settings?.useAddress) {
+        submitData.postcode = formData.postcode;
+        submitData.address = formData.address;
+        submitData.address_detail = formData.address_detail;
+        
+        if (settings?.useLocation) {
+          submitData.latitude = formData.latitude;
+          submitData.longitude = formData.longitude;
+        }
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/members/${userData.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: formData.name,
-          nickname: formData.nickname,
-          mobile: formData.mobile,
-          postcode: formData.postcode,
-          address: formData.address,
-          address_detail: formData.address_detail,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          ...(formData.password && { password: formData.password }), // 비밀번호 입력시에만 전송
-        }),
+        body: JSON.stringify(submitData),
       });
 
       const data = await res.json();
@@ -136,11 +158,14 @@ export default function EditProfilePage() {
 
       setSuccessMessage("회원 정보가 성공적으로 수정되었습니다.");
       
-      // 로컬스토리지 정보 최신화 (헤더 갱신용)
-      const updatedUser = { ...userData, name: formData.name, nickname: formData.nickname };
+      // 로컬스토리지 정보 최신화 (Header 이름 갱신용)
+      const updatedUser = { 
+        ...userData, 
+        ...(settings?.useName && { name: formData.name }),
+        ...(settings?.useNickname && { nickname: formData.nickname })
+      };
       localStorage.setItem("user", JSON.stringify(updatedUser));
       
-      // 헤더 등에 변경사항 즉각 반영을 위한 강제 리로드 또는 마이페이지 이동
       setTimeout(() => {
         router.push("/mypage");
         router.refresh();
@@ -153,7 +178,14 @@ export default function EditProfilePage() {
     }
   };
 
-  if (!userData) return null;
+  // 데이터 로딩 중 화면
+  if (isFetchingData || !userData) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <Loader2 className="animate-spin text-indigo-600" size={32} />
+      </div>
+    );
+  }
 
   const inputClass = "w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm dark:text-white";
   const labelClass = "block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5";
@@ -161,16 +193,19 @@ export default function EditProfilePage() {
   return (
     <>
       <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="lazyOnload" />
-      {/* 카카오맵 API KEY 적용 부분 (선택) */}
-      <Script 
-        src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&libraries=services&autoload=false`} 
-        strategy="lazyOnload"
-        onLoad={() => {
-          if ((window as any).kakao && (window as any).kakao.maps) {
-            (window as any).kakao.maps.load(() => {});
-          }
-        }}
-      />
+      
+      {/* ✨ 설정에서 위치 기능(useLocation)을 켰을 때만 카카오 맵 API 로드 */}
+      {settings?.useLocation && (
+        <Script 
+          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&libraries=services&autoload=false`} 
+          strategy="lazyOnload"
+          onLoad={() => {
+            if ((window as any).kakao && (window as any).kakao.maps) {
+              (window as any).kakao.maps.load(() => {});
+            }
+          }}
+        />
+      )}
 
       <div className="min-h-[80vh] py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-900 transition-colors flex justify-center pt-34">
         <div className="max-w-2xl w-full space-y-8 bg-white dark:bg-slate-800 p-8 md:p-12 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700">
@@ -198,47 +233,55 @@ export default function EditProfilePage() {
               </div>
             </div>
 
-            {/* 일반 정보 구역 */}
-            <div>
-              <label className={labelClass}>이름 <span className="text-red-500">*</span></label>
-              <input type="text" name="name" value={formData.name} required onChange={handleChange} className={inputClass} />
-            </div>
-
-            <div>
-              <label className={labelClass}>닉네임</label>
-              <input type="text" name="nickname" value={formData.nickname} onChange={handleChange} className={inputClass} />
-            </div>
-
-            <div>
-              <label className={labelClass}>휴대폰 번호</label>
-              <input type="tel" name="mobile" value={formData.mobile} onChange={handleChange} className={inputClass} placeholder="010-0000-0000" />
-            </div>
-
-            <div className="space-y-3">
-              <label className={labelClass}>주소</label>
-              <div className="flex gap-2">
-                <input 
-                  type="text" name="postcode" value={formData.postcode} readOnly 
-                  className={`${inputClass} flex-1 bg-slate-100 dark:bg-slate-700/50 cursor-not-allowed`} 
-                  placeholder="우편번호" 
-                />
-                <button 
-                  type="button" onClick={openPostcode} 
-                  className="px-4 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors whitespace-nowrap"
-                >
-                  우편번호 검색
-                </button>
+            {/* ✨ 설정에 따라 동적으로 필드 노출 */}
+            {settings?.useName && (
+              <div>
+                <label className={labelClass}>이름 <span className="text-red-500">*</span></label>
+                <input type="text" name="name" value={formData.name} required onChange={handleChange} className={inputClass} />
               </div>
-              <input 
-                type="text" name="address" value={formData.address} readOnly 
-                className={`${inputClass} bg-slate-100 dark:bg-slate-700/50 cursor-not-allowed`} 
-                placeholder="기본 주소" 
-              />
-              <input 
-                type="text" name="address_detail" value={formData.address_detail} onChange={handleChange} 
-                className={inputClass} placeholder="상세 주소를 입력해주세요" 
-              />
-            </div>
+            )}
+
+            {settings?.useNickname && (
+              <div>
+                <label className={labelClass}>닉네임</label>
+                <input type="text" name="nickname" value={formData.nickname} onChange={handleChange} className={inputClass} />
+              </div>
+            )}
+
+            {settings?.useMobile && (
+              <div>
+                <label className={labelClass}>휴대폰 번호</label>
+                <input type="tel" name="mobile" value={formData.mobile} onChange={handleChange} className={inputClass} placeholder="010-0000-0000" />
+              </div>
+            )}
+
+            {settings?.useAddress && (
+              <div className="space-y-3">
+                <label className={labelClass}>주소</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" name="postcode" value={formData.postcode} readOnly 
+                    className={`${inputClass} flex-1 bg-slate-100 dark:bg-slate-700/50 cursor-not-allowed`} 
+                    placeholder="우편번호" 
+                  />
+                  <button 
+                    type="button" onClick={openPostcode} 
+                    className="px-4 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors whitespace-nowrap"
+                  >
+                    우편번호 검색
+                  </button>
+                </div>
+                <input 
+                  type="text" name="address" value={formData.address} readOnly 
+                  className={`${inputClass} bg-slate-100 dark:bg-slate-700/50 cursor-not-allowed`} 
+                  placeholder="기본 주소" 
+                />
+                <input 
+                  type="text" name="address_detail" value={formData.address_detail} onChange={handleChange} 
+                  className={inputClass} placeholder="상세 주소를 입력해주세요" 
+                />
+              </div>
+            )}
 
             {errorMessage && (
               <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-bold">
