@@ -314,7 +314,7 @@ export default function EditProfilePage() {
                     <div className="mt-3 p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-2">
                       <FileText className="text-indigo-500" size={16} />
                       <a 
-                        href={`${process.env.NEXT_PUBLIC_API_BASE_URL}${userData.approvalFileUrl}`} 
+                        href={`${userData.approvalFileUrl}`} 
                         target="_blank" 
                         rel="noreferrer" 
                         className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
