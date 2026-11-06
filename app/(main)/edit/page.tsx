@@ -28,50 +28,68 @@ export default function EditProfilePage() {
     address_detail: "",
     latitude: "",
     longitude: "",
-    companyName: "", // ✨ 조합원용 기업명 추가
+    companyName: "",
   });
 
-  const [approvalFile, setApprovalFile] = useState<File | null>(null); // ✨ 조합원용 증빙서류 상태 추가
+  const [approvalFile, setApprovalFile] = useState<File | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const userStr = localStorage.getItem("user");
 
-    if (!token || !userStr) {
+    if (!token) {
       alert("로그인이 필요합니다.");
       router.push("/login");
       return;
     }
 
-    try {
-      const user = JSON.parse(userStr);
-      setUserData(user);
-      
-      setFormData((prev) => ({
-        ...prev,
-        name: user.name || "",
-        nickname: user.nickname || "",
-        mobile: user.mobile || "",
-        postcode: user.postcode || "",
-        address: user.address || "",
-        address_detail: user.address_detail || "",
-        latitude: user.latitude || "",
-        longitude: user.longitude || "",
-        companyName: user.companyName || "", // ✨ 유저 데이터에서 기업명 불러오기
-      }));
+    const fetchData = async () => {
+      try {
+        // ✨ 1. 내 정보 불러오기 API 호출 (/api/auth/info)
+        const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/info`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        const userDataJson = await userRes.json();
+        
+        if (!userDataJson.success) {
+          throw new Error("회원 정보를 불러올 수 없습니다.");
+        }
 
-      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/member-settings`)
-        .then((res) => res.json())
-        .then((json) => {
-          if (json.success) {
-            setSettings(json.data);
-          }
-        })
-        .finally(() => setIsFetchingData(false));
+        const user = userDataJson.data;
+        setUserData(user); // 최신 DB 정보를 상태에 저장
+        
+        setFormData((prev) => ({
+          ...prev,
+          name: user.name || "",
+          nickname: user.nickname || "",
+          mobile: user.mobile || "",
+          postcode: user.postcode || "",
+          address: user.address || "",
+          address_detail: user.address_detail || "",
+          latitude: user.latitude || "",
+          longitude: user.longitude || "",
+          companyName: user.companyName || "", // 최신 기업명 불러오기
+        }));
 
-    } catch (e) {
-      router.push("/login");
-    }
+        // 2. 회원가입/수정 설정 불러오기
+        const settingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/member-settings`);
+        const settingsJson = await settingsRes.json();
+        
+        if (settingsJson.success) {
+          setSettings(settingsJson.data);
+        }
+      } catch (e) {
+        console.error("데이터 로드 오류:", e);
+        router.push("/login");
+      } finally {
+        setIsFetchingData(false);
+      }
+    };
+
+    fetchData();
   }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,7 +98,6 @@ export default function EditProfilePage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✨ 파일 변경 핸들러
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMessage("");
     setSuccessMessage("");
@@ -146,7 +163,6 @@ export default function EditProfilePage() {
     try {
       const token = localStorage.getItem("token");
       
-      // ✨ JSON 대신 FormData를 사용하여 파일까지 함께 전송하도록 변경
       const submitData = new FormData();
       
       if (formData.password) submitData.append("password", formData.password);
@@ -164,7 +180,6 @@ export default function EditProfilePage() {
         }
       }
 
-      // ✨ 회원 타입별 필드 분기 추가
       if (userData?.memberType === "NORMAL" && settings?.useNickname) {
         submitData.append("nickname", formData.nickname);
       }
@@ -176,10 +191,10 @@ export default function EditProfilePage() {
         }
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/members/${userData.id}`, {
+      // ✨ 2. 정보 수정하기 API 호출 (/api/auth/update)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/update`, {
         method: "PUT",
         headers: {
-          // ⚠️ FormData 사용 시 Content-Type을 지정하지 않아야 브라우저가 자동으로 boundary를 설정함
           Authorization: `Bearer ${token}`,
         },
         body: submitData,
@@ -193,7 +208,7 @@ export default function EditProfilePage() {
 
       setSuccessMessage("회원 정보가 성공적으로 수정되었습니다.");
       
-      // 업데이트된 정보를 로컬 스토리지에 반영
+      // 앱 내비게이션 바 등에서 사용하는 로컬 스토리지 정보도 함께 업데이트
       const updatedUser = { 
         ...userData, 
         ...(settings?.useName && { name: formData.name }),
@@ -231,7 +246,7 @@ export default function EditProfilePage() {
       
       {settings?.useLocation && (
         <Script 
-          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKao_MAP_API_KEY}&libraries=services&autoload=false`} 
+          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&libraries=services&autoload=false`} 
           strategy="lazyOnload"
           onLoad={() => {
             if ((window as any).kakao && (window as any).kakao.maps) {
@@ -268,7 +283,6 @@ export default function EditProfilePage() {
 
             {settings?.useName && (
               <div>
-                {/* ✨ 회원 구분에 따른 라벨 변경 */}
                 <label className={labelClass}>
                   {userData.memberType === "UNION" ? "담당자 이름" : "이름"} <span className="text-red-500">*</span>
                 </label>
@@ -276,7 +290,6 @@ export default function EditProfilePage() {
               </div>
             )}
 
-            {/* ✨ 일반 회원일 때만 닉네임 노출, 조합원일 경우 기업명 & 증빙서류 노출 */}
             {userData.memberType === "NORMAL" ? (
               settings?.useNickname && (
                 <div>
@@ -299,13 +312,20 @@ export default function EditProfilePage() {
                   <p className="text-xs text-slate-500 mt-1">
                     ※ 새로운 파일을 업로드하면 기존 증빙서류가 교체됩니다. (jpg, png, pdf 허용)
                   </p>
+                  {/* ✨ 기존에 등록된 파일이 있다면 다운로드 링크 제공 */}
+                  {userData.approvalFileUrl && !approvalFile && (
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-2">
+                      <a href={`${process.env.NEXT_PUBLIC_API_BASE_URL}${userData.approvalFileUrl}`} target="_blank" rel="noreferrer" className="underline">
+                        현재 등록된 증빙서류 보기
+                      </a>
+                    </p>
+                  )}
                 </div>
               </div>
             )}
 
             {settings?.useMobile && (
               <div>
-                {/* ✨ 회원 구분에 따른 라벨 변경 */}
                 <label className={labelClass}>
                   {userData.memberType === "UNION" ? "담당자 휴대폰 번호" : "휴대폰 번호"}
                 </label>
@@ -381,7 +401,6 @@ export default function EditProfilePage() {
         </div>
       </div>
 
-      {/* 우편번호 검색 레이어 팝업 UI */}
       {isPostcodeOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
