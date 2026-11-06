@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, UserCog, CheckCircle2, AlertCircle, X } from "lucide-react"; // ✨ X 아이콘 추가
+import { Loader2, UserCog, CheckCircle2, AlertCircle, X } from "lucide-react";
 import Script from "next/script";
 
 export default function EditProfilePage() {
@@ -12,7 +12,7 @@ export default function EditProfilePage() {
   const [userData, setUserData] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
   
-  const [isPostcodeOpen, setIsPostcodeOpen] = useState(false); // ✨ 레이어 팝업 상태 추가
+  const [isPostcodeOpen, setIsPostcodeOpen] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -28,7 +28,10 @@ export default function EditProfilePage() {
     address_detail: "",
     latitude: "",
     longitude: "",
+    companyName: "", // ✨ 조합원용 기업명 추가
   });
+
+  const [approvalFile, setApprovalFile] = useState<File | null>(null); // ✨ 조합원용 증빙서류 상태 추가
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -54,6 +57,7 @@ export default function EditProfilePage() {
         address_detail: user.address_detail || "",
         latitude: user.latitude || "",
         longitude: user.longitude || "",
+        companyName: user.companyName || "", // ✨ 유저 데이터에서 기업명 불러오기
       }));
 
       fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/member-settings`)
@@ -76,14 +80,24 @@ export default function EditProfilePage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✨ 다음 우편번호 레이어 팝업 열기 및 좌표 변환
+  // ✨ 파일 변경 핸들러
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    if (e.target.files && e.target.files.length > 0) {
+      setApprovalFile(e.target.files[0]);
+    } else {
+      setApprovalFile(null);
+    }
+  };
+
   const openPostcode = () => {
     if (typeof window === "undefined" || !(window as any).daum) {
       setErrorMessage("우편번호 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
       return;
     }
 
-    setIsPostcodeOpen(true); // 레이어 띄우기
+    setIsPostcodeOpen(true);
 
     setTimeout(() => {
       const layer = document.getElementById("postcode-layer");
@@ -97,9 +111,8 @@ export default function EditProfilePage() {
               address: fullAddress,
             }));
             
-            setIsPostcodeOpen(false); // 검색 완료 시 닫기
+            setIsPostcodeOpen(false);
             
-            // 카카오 Geocoder로 좌표 변환
             if (settings?.useLocation && (window as any).kakao && (window as any).kakao.maps?.services) {
               const geocoder = new (window as any).kakao.maps.services.Geocoder();
               geocoder.addressSearch(fullAddress, (result: any, status: any) => {
@@ -115,7 +128,7 @@ export default function EditProfilePage() {
           },
           width: "100%",
           height: "100%",
-        }).embed(layer); // ✨ open() 대신 embed() 사용
+        }).embed(layer);
       }
     }, 100);
   };
@@ -133,30 +146,43 @@ export default function EditProfilePage() {
     try {
       const token = localStorage.getItem("token");
       
-      const submitData: any = {};
-      if (formData.password) submitData.password = formData.password;
-      if (settings?.useName) submitData.name = formData.name;
-      if (settings?.useNickname) submitData.nickname = formData.nickname;
-      if (settings?.useMobile) submitData.mobile = formData.mobile;
+      // ✨ JSON 대신 FormData를 사용하여 파일까지 함께 전송하도록 변경
+      const submitData = new FormData();
+      
+      if (formData.password) submitData.append("password", formData.password);
+      if (settings?.useName) submitData.append("name", formData.name);
+      if (settings?.useMobile) submitData.append("mobile", formData.mobile);
       
       if (settings?.useAddress) {
-        submitData.postcode = formData.postcode;
-        submitData.address = formData.address;
-        submitData.address_detail = formData.address_detail;
+        submitData.append("postcode", formData.postcode);
+        submitData.append("address", formData.address);
+        submitData.append("address_detail", formData.address_detail);
         
         if (settings?.useLocation) {
-          submitData.latitude = formData.latitude;
-          submitData.longitude = formData.longitude;
+          submitData.append("latitude", String(formData.latitude));
+          submitData.append("longitude", String(formData.longitude));
+        }
+      }
+
+      // ✨ 회원 타입별 필드 분기 추가
+      if (userData?.memberType === "NORMAL" && settings?.useNickname) {
+        submitData.append("nickname", formData.nickname);
+      }
+      
+      if (userData?.memberType === "UNION") {
+        submitData.append("companyName", formData.companyName);
+        if (approvalFile) {
+          submitData.append("approvalFile", approvalFile);
         }
       }
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/members/${userData.id}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
+          // ⚠️ FormData 사용 시 Content-Type을 지정하지 않아야 브라우저가 자동으로 boundary를 설정함
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(submitData),
+        body: submitData,
       });
 
       const data = await res.json();
@@ -167,10 +193,12 @@ export default function EditProfilePage() {
 
       setSuccessMessage("회원 정보가 성공적으로 수정되었습니다.");
       
+      // 업데이트된 정보를 로컬 스토리지에 반영
       const updatedUser = { 
         ...userData, 
         ...(settings?.useName && { name: formData.name }),
-        ...(settings?.useNickname && { nickname: formData.nickname })
+        ...(settings?.useNickname && { nickname: formData.nickname }),
+        ...(userData?.memberType === "UNION" && { companyName: formData.companyName })
       };
       localStorage.setItem("user", JSON.stringify(updatedUser));
       
@@ -203,7 +231,7 @@ export default function EditProfilePage() {
       
       {settings?.useLocation && (
         <Script 
-          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&libraries=services&autoload=false`} 
+          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKao_MAP_API_KEY}&libraries=services&autoload=false`} 
           strategy="lazyOnload"
           onLoad={() => {
             if ((window as any).kakao && (window as any).kakao.maps) {
@@ -240,21 +268,47 @@ export default function EditProfilePage() {
 
             {settings?.useName && (
               <div>
-                <label className={labelClass}>이름 <span className="text-red-500">*</span></label>
+                {/* ✨ 회원 구분에 따른 라벨 변경 */}
+                <label className={labelClass}>
+                  {userData.memberType === "UNION" ? "담당자 이름" : "이름"} <span className="text-red-500">*</span>
+                </label>
                 <input type="text" name="name" value={formData.name} required onChange={handleChange} className={inputClass} />
               </div>
             )}
 
-            {settings?.useNickname && (
-              <div>
-                <label className={labelClass}>닉네임</label>
-                <input type="text" name="nickname" value={formData.nickname} onChange={handleChange} className={inputClass} />
+            {/* ✨ 일반 회원일 때만 닉네임 노출, 조합원일 경우 기업명 & 증빙서류 노출 */}
+            {userData.memberType === "NORMAL" ? (
+              settings?.useNickname && (
+                <div>
+                  <label className={labelClass}>닉네임</label>
+                  <input type="text" name="nickname" value={formData.nickname} onChange={handleChange} className={inputClass} />
+                </div>
+              )
+            ) : (
+              <div className="bg-indigo-50/50 dark:bg-indigo-900/20 p-5 rounded-xl border border-indigo-100 dark:border-indigo-800 space-y-4">
+                <div>
+                  <label className={labelClass}>기업명 <span className="text-red-500">*</span></label>
+                  <input type="text" name="companyName" value={formData.companyName} required onChange={handleChange} className={inputClass} placeholder="기업명을 정확히 입력해주세요" />
+                </div>
+                <div>
+                  <label className={labelClass}>승인을 위한 증빙서류 (사업자등록증 등)</label>
+                  <input 
+                    type="file" onChange={handleFileChange} 
+                    className={`${inputClass} !p-2 bg-white dark:bg-slate-800`} accept=".jpg,.jpeg,.png,.pdf" 
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    ※ 새로운 파일을 업로드하면 기존 증빙서류가 교체됩니다. (jpg, png, pdf 허용)
+                  </p>
+                </div>
               </div>
             )}
 
             {settings?.useMobile && (
               <div>
-                <label className={labelClass}>휴대폰 번호</label>
+                {/* ✨ 회원 구분에 따른 라벨 변경 */}
+                <label className={labelClass}>
+                  {userData.memberType === "UNION" ? "담당자 휴대폰 번호" : "휴대폰 번호"}
+                </label>
                 <input type="tel" name="mobile" value={formData.mobile} onChange={handleChange} className={inputClass} placeholder="010-0000-0000" />
               </div>
             )}
@@ -327,7 +381,7 @@ export default function EditProfilePage() {
         </div>
       </div>
 
-      {/* ✨ 우편번호 검색 레이어 팝업 UI */}
+      {/* 우편번호 검색 레이어 팝업 UI */}
       {isPostcodeOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
@@ -341,7 +395,6 @@ export default function EditProfilePage() {
                 <X size={20} />
               </button>
             </div>
-            {/* 다음 우편번호 iframe이 삽입될 타겟 엘리먼트 */}
             <div id="postcode-layer" className="w-full h-[450px] bg-white dark:bg-slate-900"></div>
           </div>
         </div>
