@@ -242,7 +242,7 @@ export default function MemberDetail() {
                     <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg flex items-center gap-2">
                       <FileText className="text-indigo-500" size={16} />
                       <a 
-                        href={`${process.env.NEXT_PUBLIC_API_BASE_URL}${formData.approvalFileUrl}`} 
+                        href={`${formData.approvalFileUrl}`} 
                         target="_blank" 
                         rel="noreferrer" 
                         className="text-sm text-indigo-600 font-semibold hover:underline"
