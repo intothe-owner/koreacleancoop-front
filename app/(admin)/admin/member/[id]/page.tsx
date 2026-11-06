@@ -18,7 +18,6 @@ export default function MemberDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // ✨ 회원타입(memberType), 기업명(companyName), 증빙서류 경로(approvalFileUrl) 추가
   const initialForm = {
     id: 0, loginId: "", name: "", nickname: "", phone: "", mobile: "", 
     postcode: "", address: "", address_detail: "", latitude: "", longitude: "", 
@@ -26,7 +25,7 @@ export default function MemberDetail() {
     memberType: "NORMAL", companyName: "", approvalFileUrl: ""
   };
   const [formData, setFormData] = useState(initialForm);
-  const [approvalFile, setApprovalFile] = useState<File | null>(null); // ✨ 조합원용 파일 상태
+  const [approvalFile, setApprovalFile] = useState<File | null>(null);
 
   const getAuthHeaders = () => {
     const rawToken = localStorage.getItem("token") || "";
@@ -64,7 +63,6 @@ export default function MemberDetail() {
     }
   }, [memberId, router]);
 
-  // ✨ 파일 변경 핸들러
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setApprovalFile(e.target.files[0]);
@@ -111,7 +109,6 @@ export default function MemberDetail() {
     setIsSaving(true);
 
     try {
-      // ✨ JSON 대신 FormData를 사용하여 파일 전송 가능하도록 수정
       const submitData = new FormData();
       
       if (formData.password) submitData.append("password", formData.password);
@@ -126,7 +123,6 @@ export default function MemberDetail() {
       
       submitData.append("level", String(formData.level));
 
-      // ✨ 회원 타입별 필드 분기 적용
       if (formData.memberType === "NORMAL" && formData.nickname) {
         submitData.append("nickname", formData.nickname);
       }
@@ -140,7 +136,7 @@ export default function MemberDetail() {
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/members/${formData.id}`, {
         method: "PUT",
-        headers: getAuthHeaders(), // FormData 전송이므로 Content-Type 지정 안함
+        headers: getAuthHeaders(),
         body: submitData
       });
       
@@ -223,7 +219,6 @@ export default function MemberDetail() {
               <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required className={inputClass} />
             </div>
 
-            {/* ✨ 닉네임은 일반 회원에게만 노출 */}
             {formData.memberType === "NORMAL" && (
               <div>
                 <label className="block font-bold mb-1 text-slate-700">닉네임</label>
@@ -231,7 +226,6 @@ export default function MemberDetail() {
               </div>
             )}
 
-            {/* ✨ 조합원 회원인 경우 기업명 및 파일 업로드 폼 노출 */}
             {formData.memberType === "UNION" && (
               <div className="col-span-2 grid grid-cols-2 gap-6 bg-indigo-50/50 p-5 rounded-xl border border-indigo-100">
                 <div>
@@ -242,15 +236,20 @@ export default function MemberDetail() {
                   <label className="block font-bold mb-1 text-slate-700">승인 증빙서류 (사업자등록증 등)</label>
                   <input 
                     type="file" onChange={handleFileChange} 
-                    className={`${inputClass} !p-1.5`} accept=".jpg,.jpeg,.png,.pdf" 
+                    className={`${inputClass} !p-1.5 bg-white`} accept=".jpg,.jpeg,.png,.pdf" 
                   />
                   {formData.approvalFileUrl && !approvalFile && (
-                    <p className="text-xs text-indigo-600 font-semibold mt-2 flex items-center gap-1">
-                      <FileText size={14} />
-                      <a href={`${process.env.NEXT_PUBLIC_API_BASE_URL}${formData.approvalFileUrl}`} target="_blank" rel="noreferrer" className="underline hover:text-indigo-800">
-                        기존 등록된 서류 보기
+                    <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg flex items-center gap-2">
+                      <FileText className="text-indigo-500" size={16} />
+                      <a 
+                        href={`${process.env.NEXT_PUBLIC_API_BASE_URL}${formData.approvalFileUrl}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="text-sm text-indigo-600 font-semibold hover:underline"
+                      >
+                        기존 등록된 서류 확인하기
                       </a>
-                    </p>
+                    </div>
                   )}
                 </div>
               </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, UserCog, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { Loader2, UserCog, CheckCircle2, AlertCircle, X, FileText } from "lucide-react";
 import Script from "next/script";
 
 export default function EditProfilePage() {
@@ -44,7 +44,6 @@ export default function EditProfilePage() {
 
     const fetchData = async () => {
       try {
-        // ✨ 1. 내 정보 불러오기 API 호출 (/api/auth/info)
         const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/info`, {
           method: "GET",
           headers: {
@@ -59,7 +58,7 @@ export default function EditProfilePage() {
         }
 
         const user = userDataJson.data;
-        setUserData(user); // 최신 DB 정보를 상태에 저장
+        setUserData(user); 
         
         setFormData((prev) => ({
           ...prev,
@@ -71,10 +70,9 @@ export default function EditProfilePage() {
           address_detail: user.address_detail || "",
           latitude: user.latitude || "",
           longitude: user.longitude || "",
-          companyName: user.companyName || "", // 최신 기업명 불러오기
+          companyName: user.companyName || "", 
         }));
 
-        // 2. 회원가입/수정 설정 불러오기
         const settingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/member-settings`);
         const settingsJson = await settingsRes.json();
         
@@ -191,7 +189,6 @@ export default function EditProfilePage() {
         }
       }
 
-      // ✨ 2. 정보 수정하기 API 호출 (/api/auth/update)
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/update`, {
         method: "PUT",
         headers: {
@@ -208,7 +205,6 @@ export default function EditProfilePage() {
 
       setSuccessMessage("회원 정보가 성공적으로 수정되었습니다.");
       
-      // 앱 내비게이션 바 등에서 사용하는 로컬 스토리지 정보도 함께 업데이트
       const updatedUser = { 
         ...userData, 
         ...(settings?.useName && { name: formData.name }),
@@ -312,13 +308,20 @@ export default function EditProfilePage() {
                   <p className="text-xs text-slate-500 mt-1">
                     ※ 새로운 파일을 업로드하면 기존 증빙서류가 교체됩니다. (jpg, png, pdf 허용)
                   </p>
+                  
                   {/* ✨ 기존에 등록된 파일이 있다면 다운로드 링크 제공 */}
                   {userData.approvalFileUrl && !approvalFile && (
-                    <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-2">
-                      <a href={`${process.env.NEXT_PUBLIC_API_BASE_URL}${userData.approvalFileUrl}`} target="_blank" rel="noreferrer" className="underline">
-                        현재 등록된 증빙서류 보기
+                    <div className="mt-3 p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-2">
+                      <FileText className="text-indigo-500" size={16} />
+                      <a 
+                        href={`${process.env.NEXT_PUBLIC_API_BASE_URL}${userData.approvalFileUrl}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
+                      >
+                        기존 등록된 서류 확인하기
                       </a>
-                    </p>
+                    </div>
                   )}
                 </div>
               </div>
