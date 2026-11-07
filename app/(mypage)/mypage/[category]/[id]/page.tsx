@@ -16,6 +16,20 @@ const STATUS_BADGE: Record<string, { label: string; style: string }> = {
   CANCELED: { label: "취소됨", style: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" },
 };
 
+const DETAIL_LABELS: Record<string, string> = {
+  BuildingType: "건물/공간 유형",
+  buildingType: "건물/공간 유형",
+  AreaSize: "평수(면적)",
+  areaSize: "평수(면적)",
+  CleaningCycle: "요청 주기",
+  cleaningCycle: "요청 주기",
+  SpecialNeeds: "특이사항/추가요청",
+  specialNeeds: "특이사항/추가요청",
+  acType: "에어컨 종류",
+  acCount: "에어컨 수량",
+  ceilingHeight: "현장 층고",
+};
+
 export default function QuoteDetail() {
   const params = useParams();
   const router = useRouter();
@@ -76,8 +90,8 @@ export default function QuoteDetail() {
           ...raw,
           matchedPartners: raw.matches?.map((m: any) => ({
              id: m.member?.id,
-             companyName: m.member?.companyName,
-             phone: m.member?.phone
+             companyName: m.member?.companyName || m.member?.name || "업체명 미상",
+             phone: m.member?.phone || m.member?.mobile || "연락처 미등록"
           })) || [],
           review: raw.reviewContent ? {
              rating: raw.reviewRating,
@@ -100,8 +114,6 @@ export default function QuoteDetail() {
 
   const isPartner = userData?.level >= 2;
 
-  // 🌟 업체명/회사명 가져오기 로직 강화
-  // 내 정보(userData)에 companyName이 없으면, 매칭된 업체 리스트에서 내 아이디와 일치하는 업체의 companyName을 뽑아옵니다.
   const getMyCompanyName = () => {
     if (userData?.companyName) return userData.companyName;
     if (quoteDetail?.matchedPartners?.length > 0) {
@@ -173,7 +185,6 @@ export default function QuoteDetail() {
     }
   };
 
-  // 🌟 실제 보고서 이미지 서버 전송 (FormData)
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reportImages.entrance || !reportImages.before || !reportImages.during || !reportImages.after) {
@@ -192,14 +203,14 @@ export default function QuoteDetail() {
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/reports/${quoteId}`, {
         method: 'POST',
-        headers: { "Authorization": `Bearer ${token}` }, // FormData는 Content-Type을 자동 설정함
+        headers: { "Authorization": `Bearer ${token}` },
         body: formData
       });
       const data = await res.json();
       
       if(data.success) {
         alert("작업 보고서가 성공적으로 전송 및 저장되었습니다.");
-        fetchQuoteDetail(); // 상태 새로고침 (시공완료 등으로 변경 확인용)
+        fetchQuoteDetail(); 
       } else {
         alert(data.message || "보고서 저장 실패");
       }
@@ -210,7 +221,6 @@ export default function QuoteDetail() {
     }
   };
 
-  // 🌟 PDF 다운로드 핸들러
   const handleDownloadPdf = async () => {
     setIsDownloading(true);
     try {
@@ -221,7 +231,6 @@ export default function QuoteDetail() {
       const data = await res.json();
       
       if (data.success && data.url) {
-        // 새 창(또는 브라우저 다운로드)으로 S3 PDF URL 열기
         window.location.href = data.url;
       } else {
         alert(data.message || "PDF 생성에 실패했습니다. 보고서가 먼저 작성되었는지 확인해주세요.");
@@ -248,6 +257,7 @@ export default function QuoteDetail() {
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 rounded-2xl overflow-hidden">
       
+      {/* --- 상단 헤더 영역 --- */}
       <div className="bg-white dark:bg-slate-800 p-6 md:p-8 border-b border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button onClick={() => router.back()} className="p-2 -ml-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-white dark:hover:bg-slate-700 transition-colors">
@@ -266,7 +276,6 @@ export default function QuoteDetail() {
         <div className="text-right text-sm font-medium text-slate-500 flex flex-col md:items-end gap-2">
           <span>요청일시: {dayjs(quoteDetail.createdAt).format("YYYY-MM-DD HH:mm")}</span>
           
-          {/* 🌟 시공완료 시 모두에게 PDF 다운로드 버튼 노출 */}
           {quoteDetail.status === "COMPLETED" && (
             <button 
               onClick={handleDownloadPdf}
@@ -280,288 +289,295 @@ export default function QuoteDetail() {
         </div>
       </div>
 
-      <div className="p-6 md:p-8 flex flex-col xl:flex-row gap-8">
+      {/* --- 본문 레이아웃 --- */}
+      <div className="p-6 md:p-8 flex flex-col gap-8">
         
-        {/* ---------------- 좌측 패널 (정보 및 보고서) ---------------- */}
-        <div className="flex-1 flex flex-col gap-6">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">고객 및 현장 정보</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
-              <div className="flex gap-3 items-start">
-                <User size={18} className="text-indigo-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="text-xs font-bold text-slate-400 mb-1">고객/기관명</div>
-                  <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{quoteDetail.customerName} {isPartner && "고객님"}</div>
-                </div>
-              </div>
-              <div className="flex gap-3 items-start">
-                <Phone size={18} className="text-indigo-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="text-xs font-bold text-slate-400 mb-1">연락처</div>
-                  <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{quoteDetail.customerPhone}</div>
-                </div>
-              </div>
-              <div className="flex gap-3 items-start md:col-span-2">
-                <MapPin size={18} className="text-indigo-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="text-xs font-bold text-slate-400 mb-1">작업 현장 주소</div>
-                  <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {quoteDetail.address} {quoteDetail.addressDetail}
+        {/* 🌟 1단: 고객 정보(좌) + 액션 패널(우) */}
+        <div className="flex flex-col xl:flex-row gap-8">
+          
+          {/* 고객 및 현장 정보 (가변 영역) */}
+          <div className="flex-1">
+            <div className="h-full bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">고객 및 현장 정보</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
+                <div className="flex gap-3 items-start">
+                  <User size={18} className="text-indigo-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 mb-1">고객/기관명</div>
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{quoteDetail.customerName} {isPartner && "고객님"}</div>
                   </div>
                 </div>
-              </div>
-              <div className="flex gap-3 items-start">
-                <Calendar size={18} className="text-indigo-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="text-xs font-bold text-slate-400 mb-1">희망 시공일자</div>
-                  <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {quoteDetail.preferredDate || "미지정 (협의)"}
+                <div className="flex gap-3 items-start">
+                  <Phone size={18} className="text-indigo-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 mb-1">연락처</div>
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{quoteDetail.customerPhone}</div>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start md:col-span-2">
+                  <MapPin size={18} className="text-indigo-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 mb-1">작업 현장 주소</div>
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      {quoteDetail.address} {quoteDetail.addressDetail}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start md:col-span-2">
+                  <Calendar size={18} className="text-indigo-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="text-xs font-bold text-slate-400 mb-1">희망 시공일자</div>
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      {quoteDetail.preferredDate ? dayjs(quoteDetail.preferredDate).format("YYYY-MM-DD") : "미지정 (협의)"}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">요청 상세 내용</h3>
-            <div className="flex flex-col gap-4">
-              {Object.entries(quoteDetail.details || {}).map(([key, value]) => {
-                if (key === 'inquiry') return null; 
-                return (
-                  <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                    <span className="text-sm font-bold text-slate-400 w-32 capitalize">{key}</span>
-                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{String(value)}</span>
-                  </div>
-                );
-              })}
-              {quoteDetail.details?.inquiry && (
-                <div className="mt-2 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                  <strong className="block text-xs text-slate-400 mb-2 font-bold uppercase">기타 요청사항</strong>
-                  {quoteDetail.details.inquiry}
+          {/* 우측 액션 패널 (고정폭 96) */}
+          <div className="w-full xl:w-96 flex-shrink-0 flex flex-col gap-6">
+            
+            {isPartner && (
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 p-6 shadow-sm">
+                <h3 className="text-sm font-extrabold text-indigo-800 dark:text-indigo-300 mb-4 flex items-center gap-2">
+                  <CheckCircle2 size={18} /> 진행 상태 관리
+                </h3>
+                <div className="flex flex-col gap-3">
+                  <select 
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500"
+                  >
+                    <option value="MATCHING">매칭중/대기</option>
+                    <option value="PROPOSED">견적 제안됨 (입찰)</option>
+                    <option value="MATCHED">시공 업체 확정</option>
+                    <option value="COMPLETED">시공 완료</option>
+                    <option value="CANCELED">취소됨</option>
+                  </select>
+                  <button
+                    onClick={handleStatusUpdate}
+                    disabled={isUpdatingStatus || newStatus === quoteDetail.status}
+                    className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 dark:disabled:bg-indigo-800 text-white text-sm font-extrabold transition-colors"
+                  >
+                    {isUpdatingStatus ? "변경 중..." : "상태 변경 저장"}
+                  </button>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* 🌟 파트너 전용: 작업 보고서 작성 폼 (상태가 시공완료가 아닐 때만 표출 등 조절 가능) */}
-          {isPartner && quoteDetail.status !== "COMPLETED" && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-6 border-b border-slate-100 dark:border-slate-700 pb-3">
-                <FileText className="text-emerald-500" size={22} />
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white">작업 보고서 작성 및 시공 완료</h3>
               </div>
-              
-              <form onSubmit={handleReportSubmit} className="flex flex-col gap-6">
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-bold text-slate-400">고객명/연락처</span>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{quoteDetail.customerName} / {quoteDetail.customerPhone}</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-bold text-slate-400">현장 주소</span>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{quoteDetail.address} {quoteDetail.addressDetail}</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-bold text-slate-400">담당 업체명 (조합원)</span>
-                    {/* 🌟 업체명 안전 추출 함수 사용 */}
-                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{getMyCompanyName()}</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="workDate" className="text-xs font-bold text-slate-400">작업일 (실제 시공일)</label>
-                    <input 
-                      type="date" 
-                      id="workDate"
-                      required
-                      value={reportForm.workDate}
-                      onChange={(e) => setReportForm({...reportForm, workDate: e.target.value})}
-                      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:border-emerald-500 w-full max-w-[200px] dark:text-white"
-                    />
-                  </div>
-                </div>
+            )}
 
-                <div>
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-3">사진 첨부 <span className="text-red-500">*</span></h4>
-                  <p className="text-xs text-slate-500 mb-4">각 단계에 맞는 현장 사진을 1장씩 필수로 등록해주세요.</p>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                      { key: "entrance", label: "입구 사진" },
-                      { key: "before", label: "작업 전" },
-                      { key: "during", label: "작업 중" },
-                      { key: "after", label: "작업 후" }
-                    ].map((item) => (
-                      <div key={item.key} className="flex flex-col gap-2">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300 text-center">
-                          {item.label}
-                        </label>
-                        <label className="relative flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer overflow-hidden transition-colors group">
-                          {imagePreviews[item.key as keyof typeof imagePreviews] ? (
-                            <>
-                              <img src={imagePreviews[item.key as keyof typeof imagePreviews]} alt={item.label} className="absolute inset-0 w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-white text-xs font-bold">변경하기</span>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="flex flex-col items-center gap-2 text-slate-400">
-                              <Camera size={24} />
-                              <span className="text-xs font-medium">사진 등록</span>
-                            </div>
-                          )}
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="hidden" 
-                            onChange={(e) => handleImageChange(e, item.key as keyof typeof reportImages)}
-                          />
-                        </label>
+            {!isPartner && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                <h3 className="text-sm font-extrabold text-slate-800 dark:text-white mb-4">매칭된 파트너 업체</h3>
+                {quoteDetail.matchedPartners?.length > 0 ? (
+                  <div className="flex flex-col gap-3">
+                    {quoteDetail.matchedPartners.map((p: any) => (
+                      <div key={p.id} className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">{p.companyName}</div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1"><Phone size={12} /> {p.phone}</div>
                       </div>
                     ))}
                   </div>
-                </div>
+                ) : (
+                  <p className="text-xs text-slate-400">아직 매칭된 업체가 없습니다.</p>
+                )}
+              </div>
+            )}
 
-                <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
-                  <button
-                    type="submit"
-                    disabled={isSubmittingReport}
-                    className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl text-sm font-extrabold flex items-center justify-center gap-2 transition-colors ml-auto"
-                  >
-                    {isSubmittingReport ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    ) : <Upload size={18} />}
-                    사진 전송 및 시공 완료 처리
-                  </button>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-2 text-right">
-                    * 보고서를 제출하면 상태가 즉시 '시공 완료'로 변경되며 PDF가 생성됩니다.
-                  </p>
-                </div>
-                
-              </form>
-            </div>
-          )}
+            {/* 리뷰 패널 */}
+            {quoteDetail.status === "COMPLETED" && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 p-6 shadow-sm">
+                {quoteDetail.review ? (
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">고객 리뷰</h3>
+                        <div className="flex text-amber-400">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} size={14} fill={i < quoteDetail.review.rating ? "currentColor" : "none"} />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                        {quoteDetail.review.content}
+                      </div>
+                    </div>
+                    
+                    {quoteDetail.review.reply ? (
+                      <div className="pl-4 border-l-2 border-indigo-200 dark:border-indigo-800">
+                        <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-1">파트너 답글</div>
+                        <div className="text-sm text-slate-600 dark:text-slate-300 bg-indigo-50/50 dark:bg-indigo-900/10 p-3 rounded-xl">
+                          {quoteDetail.review.reply}
+                        </div>
+                      </div>
+                    ) : (
+                      isPartner && (
+                        <div className="mt-2">
+                          <textarea
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="고객님의 리뷰에 감사 답글을 남겨주세요."
+                            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:border-indigo-500 resize-none h-24 mb-2"
+                          />
+                          <button onClick={handleReplySubmit} className="w-full py-2.5 rounded-xl bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 text-white text-sm font-bold transition-colors">
+                            답글 등록
+                          </button>
+                        </div>
+                      )
+                    )}
+                  </div>
+                ) : (
+                  !isPartner && (
+                    <div className="flex flex-col gap-3">
+                      <h3 className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
+                        <MessageSquare size={16} /> 시공 리뷰 작성
+                      </h3>
+                      <p className="text-xs text-slate-500 mb-2">시공이 완료되었습니다. 만족도를 평가해주세요!</p>
+                      <div className="flex gap-1 mb-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button key={star} onClick={() => setRating(star)} className="text-amber-400 focus:outline-none hover:scale-110 transition-transform">
+                            <Star size={24} fill={star <= rating ? "currentColor" : "none"} strokeWidth={1.5} />
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        placeholder="서비스 만족도를 상세히 적어주세요."
+                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:border-emerald-500 resize-none h-28"
+                      />
+                      <button onClick={handleReviewSubmit} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-extrabold transition-colors">
+                        <Send size={16} /> 리뷰 등록하기
+                      </button>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* ---------------- 우측 패널 (액션 및 리뷰) ---------------- */}
-        <div className="w-full xl:w-96 flex-shrink-0 flex flex-col gap-6">
-          
-          {isPartner && (
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 p-6 shadow-sm">
-              <h3 className="text-sm font-extrabold text-indigo-800 dark:text-indigo-300 mb-4 flex items-center gap-2">
-                <CheckCircle2 size={18} /> 진행 상태 관리
-              </h3>
-              <div className="flex flex-col gap-3">
-                <select 
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500"
-                >
-                  <option value="MATCHING">매칭중/대기</option>
-                  <option value="PROPOSED">견적 제안됨 (입찰)</option>
-                  <option value="MATCHED">시공 업체 확정</option>
-                  <option value="COMPLETED">시공 완료</option>
-                  <option value="CANCELED">취소됨</option>
-                </select>
-                <button
-                  onClick={handleStatusUpdate}
-                  disabled={isUpdatingStatus || newStatus === quoteDetail.status}
-                  className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 dark:disabled:bg-indigo-800 text-white text-sm font-extrabold transition-colors"
-                >
-                  {isUpdatingStatus ? "변경 중..." : "상태 변경 저장"}
-                </button>
+        {/* 🌟 2단: 요청 상세 내용 (가로 100%) */}
+        <div className="w-full bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">요청 상세 내용</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-y-6 gap-x-12">
+            {Object.entries(quoteDetail.details || {}).map(([key, value]) => {
+              if (key === 'inquiry') return null; 
+              return (
+                <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 border-b border-slate-50 dark:border-slate-700/50 pb-3">
+                  <span className="text-sm font-bold text-slate-500 dark:text-slate-400 w-40 capitalize shrink-0">{DETAIL_LABELS[key] || key}</span>
+                  <span className="text-base font-bold text-slate-900 dark:text-slate-100">{String(value)}</span>
+                </div>
+              );
+            })}
+          </div>
+          {quoteDetail.details?.inquiry && (
+            <div className="mt-6 p-5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+              <strong className="block text-xs text-slate-500 mb-3 font-bold uppercase">기타 요청사항</strong>
+              <div className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                {quoteDetail.details.inquiry}
               </div>
             </div>
           )}
+        </div>
 
-          {!isPartner && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-              <h3 className="text-sm font-extrabold text-slate-800 dark:text-white mb-4">매칭된 파트너 업체</h3>
-              {quoteDetail.matchedPartners?.length > 0 ? (
-                <div className="flex flex-col gap-3">
-                  {quoteDetail.matchedPartners.map((p: any) => (
-                    <div key={p.id} className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                      <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">{p.companyName || "업체명 미상"}</div>
-                      <div className="text-xs text-slate-500 flex items-center gap-1"><Phone size={12} /> {p.phone}</div>
+        {/* 🌟 3단: 조합원 보고서 작성 폼 (가로 100%) */}
+        {isPartner && quoteDetail.status !== "COMPLETED" && (
+          <div className="w-full bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">
+            <div className="flex items-center gap-2 mb-8 border-b border-slate-100 dark:border-slate-700 pb-4">
+              <FileText className="text-emerald-500" size={24} />
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">작업 보고서 작성 및 시공 완료</h3>
+            </div>
+            
+            <form onSubmit={handleReportSubmit} className="flex flex-col gap-8">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-slate-400">고객명/연락처</span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{quoteDetail.customerName} / {quoteDetail.customerPhone}</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-slate-400">현장 주소</span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{quoteDetail.address} {quoteDetail.addressDetail}</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-slate-400">담당 업체명 (조합원)</span>
+                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{getMyCompanyName()}</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="workDate" className="text-xs font-bold text-slate-400">작업일 (실제 시공일)</label>
+                  <input 
+                    type="date" 
+                    id="workDate"
+                    required
+                    value={reportForm.workDate}
+                    onChange={(e) => setReportForm({...reportForm, workDate: e.target.value})}
+                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-sm font-medium outline-none focus:border-emerald-500 w-full dark:text-white transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-base font-bold text-slate-800 dark:text-white mb-2">사진 첨부 <span className="text-red-500">*</span></h4>
+                <p className="text-sm text-slate-500 mb-6">각 단계에 맞는 현장 사진을 1장씩 필수로 등록해주세요.</p>
+                
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[
+                    { key: "entrance", label: "입구 사진" },
+                    { key: "before", label: "작업 전" },
+                    { key: "during", label: "작업 중" },
+                    { key: "after", label: "작업 후" }
+                  ].map((item) => (
+                    <div key={item.key} className="flex flex-col gap-3">
+                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300 text-center bg-slate-100 dark:bg-slate-800 py-2 rounded-lg">
+                        {item.label}
+                      </label>
+                      <label className="relative flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer overflow-hidden transition-all group hover:border-emerald-400">
+                        {imagePreviews[item.key as keyof typeof imagePreviews] ? (
+                          <>
+                            <img src={imagePreviews[item.key as keyof typeof imagePreviews]} alt={item.label} className="absolute inset-0 w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-white text-sm font-bold bg-black/50 px-4 py-2 rounded-lg">사진 변경</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center gap-3 text-slate-400 group-hover:text-emerald-500 transition-colors">
+                            <Camera size={32} />
+                            <span className="text-sm font-bold">여기를 눌러 첨부</span>
+                          </div>
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => handleImageChange(e, item.key as keyof typeof reportImages)}
+                        />
+                      </label>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p className="text-xs text-slate-400">아직 매칭된 업체가 없습니다.</p>
-              )}
-            </div>
-          )}
+              </div>
 
-          {quoteDetail.status === "COMPLETED" && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 p-6 shadow-sm">
-              {quoteDetail.review ? (
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">고객 리뷰</h3>
-                      <div className="flex text-amber-400">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star key={i} size={14} fill={i < quoteDetail.review.rating ? "currentColor" : "none"} />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
-                      {quoteDetail.review.content}
-                    </div>
-                  </div>
-                  
-                  {quoteDetail.review.reply ? (
-                    <div className="pl-4 border-l-2 border-indigo-200 dark:border-indigo-800">
-                      <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-1">파트너 답글</div>
-                      <div className="text-sm text-slate-600 dark:text-slate-300 bg-indigo-50/50 dark:bg-indigo-900/10 p-3 rounded-xl">
-                        {quoteDetail.review.reply}
-                      </div>
-                    </div>
-                  ) : (
-                    isPartner && (
-                      <div className="mt-2">
-                        <textarea
-                          value={replyText}
-                          onChange={(e) => setReplyText(e.target.value)}
-                          placeholder="고객님의 리뷰에 감사 답글을 남겨주세요."
-                          className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:border-indigo-500 resize-none h-24 mb-2"
-                        />
-                        <button onClick={handleReplySubmit} className="w-full py-2.5 rounded-xl bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 text-white text-sm font-bold transition-colors">
-                          답글 등록
-                        </button>
-                      </div>
-                    )
-                  )}
-                </div>
-              ) : (
-                !isPartner && (
-                  <div className="flex flex-col gap-3">
-                    <h3 className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
-                      <MessageSquare size={16} /> 시공 리뷰 작성
-                    </h3>
-                    <p className="text-xs text-slate-500 mb-2">시공이 완료되었습니다. 만족도를 평가해주세요!</p>
-                    <div className="flex gap-1 mb-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button key={star} onClick={() => setRating(star)} className="text-amber-400 focus:outline-none hover:scale-110 transition-transform">
-                          <Star size={24} fill={star <= rating ? "currentColor" : "none"} strokeWidth={1.5} />
-                        </button>
-                      ))}
-                    </div>
-                    <textarea
-                      value={reviewText}
-                      onChange={(e) => setReviewText(e.target.value)}
-                      placeholder="서비스 만족도를 상세히 적어주세요."
-                      className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:border-emerald-500 resize-none h-28"
-                    />
-                    <button onClick={handleReviewSubmit} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-extrabold transition-colors">
-                      <Send size={16} /> 리뷰 등록하기
-                    </button>
-                  </div>
-                )
-              )}
-            </div>
-          )}
-
-        </div>
+              <div className="pt-6 border-t border-slate-100 dark:border-slate-700 flex flex-col items-end">
+                <button
+                  type="submit"
+                  disabled={isSubmittingReport}
+                  className="w-full sm:w-auto px-10 py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl text-base font-extrabold flex items-center justify-center gap-3 transition-colors shadow-sm hover:shadow-md"
+                >
+                  {isSubmittingReport ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  ) : <Upload size={20} />}
+                  사진 전송 및 시공 완료 처리
+                </button>
+                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mt-3">
+                  * 보고서를 제출하면 상태가 즉시 '시공 완료'로 변경되며 1장짜리 PDF가 생성됩니다.
+                </p>
+              </div>
+              
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );
