@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { 
   ArrowLeft, MapPin, Calendar, Phone, User, 
-  CheckCircle2, MessageSquare, Star, Send, Camera, Upload, FileText
+  CheckCircle2, MessageSquare, Star, Send, Camera, Upload, FileText, Download
 } from "lucide-react";
 import dayjs from "dayjs";
 
@@ -30,12 +30,10 @@ export default function QuoteDetail() {
   const [newStatus, setNewStatus] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  // 리뷰 관련 상태
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
   const [replyText, setReplyText] = useState("");
 
-  // 🌟 조합원회원(파트너) 보고서 작성 상태
   const [reportForm, setReportForm] = useState({
     workDate: dayjs().format("YYYY-MM-DD"),
   });
@@ -49,6 +47,7 @@ export default function QuoteDetail() {
     entrance: "", before: "", during: "", after: ""
   });
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -58,8 +57,7 @@ export default function QuoteDetail() {
       router.push("/login");
       return;
     }
-    const parsedUser = JSON.parse(userStr);
-    setUserData(parsedUser);
+    setUserData(JSON.parse(userStr));
     fetchQuoteDetail();
   }, [category, quoteId, router]);
 
@@ -77,9 +75,9 @@ export default function QuoteDetail() {
         const formattedData = {
           ...raw,
           matchedPartners: raw.matches?.map((m: any) => ({
-             id: m.member.id,
-             companyName: m.member.companyName,
-             phone: m.member.phone
+             id: m.member?.id,
+             companyName: m.member?.companyName,
+             phone: m.member?.phone
           })) || [],
           review: raw.reviewContent ? {
              rating: raw.reviewRating,
@@ -102,7 +100,17 @@ export default function QuoteDetail() {
 
   const isPartner = userData?.level >= 2;
 
-  // 상태 변경
+  // 🌟 업체명/회사명 가져오기 로직 강화
+  // 내 정보(userData)에 companyName이 없으면, 매칭된 업체 리스트에서 내 아이디와 일치하는 업체의 companyName을 뽑아옵니다.
+  const getMyCompanyName = () => {
+    if (userData?.companyName) return userData.companyName;
+    if (quoteDetail?.matchedPartners?.length > 0) {
+      const me = quoteDetail.matchedPartners.find((p: any) => p.id === userData?.id);
+      if (me?.companyName) return me.companyName;
+    }
+    return userData?.name || "업체명 미상";
+  };
+
   const handleStatusUpdate = async () => {
     if (!newStatus || newStatus === quoteDetail.status) return;
     setIsUpdatingStatus(true);
@@ -127,7 +135,6 @@ export default function QuoteDetail() {
     }
   };
 
-  // 리뷰 및 답글 작성
   const submitReviewAction = async (payload: any) => {
     try {
       const token = localStorage.getItem("token");
@@ -158,7 +165,6 @@ export default function QuoteDetail() {
     submitReviewAction({ reply: replyText });
   };
 
-  // 🌟 보고서 이미지 업로드 처리
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, type: keyof typeof reportImages) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -167,7 +173,7 @@ export default function QuoteDetail() {
     }
   };
 
-  // 🌟 보고서 제출 (폼데이터 활용)
+  // 🌟 실제 보고서 이미지 서버 전송 (FormData)
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reportImages.entrance || !reportImages.before || !reportImages.during || !reportImages.after) {
@@ -176,8 +182,6 @@ export default function QuoteDetail() {
     
     setIsSubmittingReport(true);
     try {
-      /*
-      // 실제 API 통신 예시 (multipart/form-data)
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("workDate", reportForm.workDate);
@@ -188,21 +192,44 @@ export default function QuoteDetail() {
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/reports/${quoteId}`, {
         method: 'POST',
-        headers: { "Authorization": `Bearer ${token}` },
+        headers: { "Authorization": `Bearer ${token}` }, // FormData는 Content-Type을 자동 설정함
         body: formData
       });
       const data = await res.json();
-      */
       
-      // 테스트용 성공 처리
-      setTimeout(() => {
+      if(data.success) {
         alert("작업 보고서가 성공적으로 전송 및 저장되었습니다.");
-        setIsSubmittingReport(false);
-      }, 800);
-
+        fetchQuoteDetail(); // 상태 새로고침 (시공완료 등으로 변경 확인용)
+      } else {
+        alert(data.message || "보고서 저장 실패");
+      }
     } catch (error) {
       alert("보고서 저장 중 오류가 발생했습니다.");
+    } finally {
       setIsSubmittingReport(false);
+    }
+  };
+
+  // 🌟 PDF 다운로드 핸들러
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/reports/${quoteId}/pdf`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data.success && data.url) {
+        // 새 창(또는 브라우저 다운로드)으로 S3 PDF URL 열기
+        window.location.href = data.url;
+      } else {
+        alert(data.message || "PDF 생성에 실패했습니다. 보고서가 먼저 작성되었는지 확인해주세요.");
+      }
+    } catch (error) {
+      alert("서버 오류로 PDF를 가져오지 못했습니다.");
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -236,8 +263,20 @@ export default function QuoteDetail() {
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">{category} 견적 상세내역</h1>
           </div>
         </div>
-        <div className="text-right text-sm font-medium text-slate-500">
-          요청일시: {dayjs(quoteDetail.createdAt).format("YYYY-MM-DD HH:mm")}
+        <div className="text-right text-sm font-medium text-slate-500 flex flex-col md:items-end gap-2">
+          <span>요청일시: {dayjs(quoteDetail.createdAt).format("YYYY-MM-DD HH:mm")}</span>
+          
+          {/* 🌟 시공완료 시 모두에게 PDF 다운로드 버튼 노출 */}
+          {quoteDetail.status === "COMPLETED" && (
+            <button 
+              onClick={handleDownloadPdf}
+              disabled={isDownloading}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-extrabold transition-colors disabled:opacity-50"
+            >
+              {isDownloading ? <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-indigo-600"></div> : <Download size={14} />}
+              보고서 PDF 다운로드
+            </button>
+          )}
         </div>
       </div>
 
@@ -304,17 +343,16 @@ export default function QuoteDetail() {
             </div>
           </div>
 
-          {/* 🌟 조합원회원 (파트너) 전용 작업 보고서 작성 폼 */}
-          {isPartner && (
+          {/* 🌟 파트너 전용: 작업 보고서 작성 폼 (상태가 시공완료가 아닐 때만 표출 등 조절 가능) */}
+          {isPartner && quoteDetail.status !== "COMPLETED" && (
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-6 border-b border-slate-100 dark:border-slate-700 pb-3">
                 <FileText className="text-emerald-500" size={22} />
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white">작업 보고서 작성 (조합원용)</h3>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white">작업 보고서 작성 및 시공 완료</h3>
               </div>
               
               <form onSubmit={handleReportSubmit} className="flex flex-col gap-6">
                 
-                {/* 1. 자동 입력 정보 확인 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl">
                   <div className="flex flex-col gap-1">
                     <span className="text-xs font-bold text-slate-400">고객명/연락처</span>
@@ -326,7 +364,8 @@ export default function QuoteDetail() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-xs font-bold text-slate-400">담당 업체명 (조합원)</span>
-                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{userData.companyName || userData.name}</span>
+                    {/* 🌟 업체명 안전 추출 함수 사용 */}
+                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{getMyCompanyName()}</span>
                   </div>
                   <div className="flex flex-col gap-1">
                     <label htmlFor="workDate" className="text-xs font-bold text-slate-400">작업일 (실제 시공일)</label>
@@ -336,18 +375,16 @@ export default function QuoteDetail() {
                       required
                       value={reportForm.workDate}
                       onChange={(e) => setReportForm({...reportForm, workDate: e.target.value})}
-                      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:border-emerald-500 w-full max-w-[200px]"
+                      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:border-emerald-500 w-full max-w-[200px] dark:text-white"
                     />
                   </div>
                 </div>
 
-                {/* 2. 사진 첨부 (4장 필수) */}
                 <div>
                   <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-3">사진 첨부 <span className="text-red-500">*</span></h4>
                   <p className="text-xs text-slate-500 mb-4">각 단계에 맞는 현장 사진을 1장씩 필수로 등록해주세요.</p>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    
                     {[
                       { key: "entrance", label: "입구 사진" },
                       { key: "before", label: "작업 전" },
@@ -381,7 +418,6 @@ export default function QuoteDetail() {
                         </label>
                       </div>
                     ))}
-
                   </div>
                 </div>
 
@@ -394,8 +430,11 @@ export default function QuoteDetail() {
                     {isSubmittingReport ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     ) : <Upload size={18} />}
-                    보고서 저장 및 전송
+                    사진 전송 및 시공 완료 처리
                   </button>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-2 text-right">
+                    * 보고서를 제출하면 상태가 즉시 '시공 완료'로 변경되며 PDF가 생성됩니다.
+                  </p>
                 </div>
                 
               </form>
@@ -441,7 +480,7 @@ export default function QuoteDetail() {
                 <div className="flex flex-col gap-3">
                   {quoteDetail.matchedPartners.map((p: any) => (
                     <div key={p.id} className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                      <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">{p.companyName}</div>
+                      <div className="font-bold text-sm text-slate-800 dark:text-white mb-1">{p.companyName || "업체명 미상"}</div>
                       <div className="text-xs text-slate-500 flex items-center gap-1"><Phone size={12} /> {p.phone}</div>
                     </div>
                   ))}
