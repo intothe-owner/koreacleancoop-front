@@ -7,7 +7,7 @@ import {
   Settings, Users, UserCheck, Menu as MenuIcon,
   FileText, MessageSquare, LogOut, UserCircle, Loader2, Megaphone,
   BarChart2, Building2, ChevronDown, Award, Users2, TrendingUp, HeartHandshake,
-  ClipboardList
+  ClipboardList, CheckCircle2
 } from "lucide-react";
 import TokenChecker from "@/components/TokenChecker";
 import { usePathname } from "next/navigation";
@@ -18,13 +18,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [adminInfo, setAdminInfo] = useState({ id: 0, name: "", level: 0 });
 
-  // 💡 '협동조합' 아코디언 메뉴 열림/닫힘 상태 관리
+  // 💡 아코디언 메뉴 열림/닫힘 상태 관리
   const [isCoopOpen, setIsCoopOpen] = useState(false);
+  const [isQuoteOpen, setIsQuoteOpen] = useState(false); // 🌟 견적/매칭 관리 아코디언 상태
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
-
 
     if (!token || !userStr) {
       alert("관리자 페이지입니다. 먼저 로그인해 주세요.");
@@ -48,14 +48,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [pathname]);
 
-  // 현재 경로가 협동조합 하위 메뉴 중 하나라면 자동으로 아코디언을 열어줌
+  // 현재 경로에 따라 자동으로 아코디언 열어주기
   useEffect(() => {
-    if (pathname.startsWith("/admin/certification") ||
-      pathname.startsWith("/admin/customers")||
+    if (
+      pathname.startsWith("/admin/certification") ||
+      pathname.startsWith("/admin/customers") ||
       pathname.startsWith("/admin/social-contributions")
-      ) {
+    ) {
       setIsCoopOpen(true);
-    } 
+    }
+    
+    // 🌟 견적/매칭 관리 경로일 때 아코디언 열기
+    if (pathname.startsWith("/admin/quotes")) {
+      setIsQuoteOpen(true);
+    }
   }, [pathname]);
 
   const handleLogout = () => {
@@ -90,7 +96,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
           <p className="px-3 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">환경 설정</p>
 
           <Link href="/admin/settings" className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-300 hover:bg-indigo-600 hover:text-white transition-all">
@@ -106,10 +112,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <p className="px-3 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">컨텐츠 관리</p>
 
-          <Link href="/admin/member" className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-300 hover:bg-indigo-600 hover:text-white transition-all">
+          {/* 🌟 [신규] 견적 및 매칭 관리 아코디언 메뉴 */}
+          <div>
+            <button
+              onClick={() => setIsQuoteOpen(!isQuoteOpen)}
+              className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-slate-300 hover:bg-indigo-600 hover:text-white transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <ClipboardList size={18} />
+                <span className="font-medium text-sm">견적 및 매칭 관리</span>
+              </div>
+              <ChevronDown size={16} className={`transform transition-transform duration-200 ${isQuoteOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isQuoteOpen && (
+              <div className="pl-4 py-1 space-y-1 mt-1 border-l-2 border-indigo-600 ml-4">
+                <Link
+                  href="/admin/quotes"
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${pathname.startsWith('/admin/quotes') ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                >
+                  <CheckCircle2 size={14} />
+                  <span>전체 견적 문의 관리</span>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <Link href="/admin/member" className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-300 hover:bg-indigo-600 hover:text-white transition-all mt-1">
             <UserCheck size={18} />
             <span className="font-medium text-sm">회원 관리</span>
           </Link>
+          
           {adminInfo.id === 2 && (
             <Link
               href="/admin/qualifications"
@@ -123,7 +156,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
           )}
 
-          {/* 💡 [신규] 협동조합 관리 아코디언 메뉴 */}
+          {/* 💡 협동조합 관리 아코디언 메뉴 */}
           <div>
             <button
               onClick={() => setIsCoopOpen(!isCoopOpen)}
@@ -136,7 +169,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <ChevronDown size={16} className={`transform transition-transform duration-200 ${isCoopOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* 아코디언 펼쳐졌을 때 나오는 서브메뉴 목록 */}
             {isCoopOpen && (
               <div className="pl-4 py-1 space-y-1 mt-1 border-l-2 border-indigo-600 ml-4">
                 <Link
