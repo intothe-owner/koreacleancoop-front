@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { 
-  ArrowLeft, RefreshCw, AlertCircle, Building2, Wind, Bug, Shield, CheckCircle2, UserPlus, X, MapPin
+  ArrowLeft, RefreshCw, AlertCircle, Building2, Wind, Bug, Shield, CheckCircle2, UserPlus, X, MapPin, Download
 } from "lucide-react";
 import dayjs from "dayjs";
 
@@ -34,10 +34,13 @@ export default function AdminQuoteDetail() {
   const [newStatus, setNewStatus] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // 🌟 수동 매칭용 상태 추가
+  // 수동 매칭용 상태 추가
   const [isNearbyModalOpen, setIsNearbyModalOpen] = useState(false);
   const [nearbyPartners, setNearbyPartners] = useState<any[]>([]);
   const [isFetchingNearby, setIsFetchingNearby] = useState(false);
+
+  // 🌟 PDF 다운로드 상태 추가
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -115,7 +118,7 @@ export default function AdminQuoteDetail() {
     }
   };
 
-  // 🌟 [신규] 근처 조합원 수동 검색 모달 열기
+  // 근처 조합원 수동 검색 모달 열기
   const openNearbyModal = async () => {
     setIsNearbyModalOpen(true);
     setIsFetchingNearby(true);
@@ -135,7 +138,7 @@ export default function AdminQuoteDetail() {
     }
   };
 
-  // 🌟 [신규] 수동 할당(매칭) 실행
+  // 수동 할당(매칭) 실행
   const handleManualAssign = async (memberId: number, distance: number) => {
     if (!confirm("이 조합원에게 해당 견적을 수동으로 배정하시겠습니까?")) return;
     try {
@@ -155,6 +158,28 @@ export default function AdminQuoteDetail() {
       }
     } catch (error) {
       alert("서버 오류가 발생했습니다.");
+    }
+  };
+
+  // 🌟 [신규] 관리자 모드 PDF 다운로드
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/reports/${quoteId}/pdf`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.message || "PDF 생성에 실패했습니다. 파트너가 보고서를 먼저 작성했는지 확인해주세요.");
+      }
+    } catch (error) {
+      alert("서버 오류로 PDF를 가져오지 못했습니다.");
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -193,6 +218,22 @@ export default function AdminQuoteDetail() {
             <h1 className="text-2xl font-extrabold text-slate-900">관리자 견적 상세 및 관리</h1>
           </div>
         </div>
+        
+        {/* 🌟 헤더 우측 (날짜 및 PDF 다운로드 버튼) */}
+        <div className="text-right text-sm font-medium text-slate-500 flex flex-col md:items-end gap-2">
+          <span>요청일시: {dayjs(quoteDetail.createdAt).format("YYYY-MM-DD HH:mm")}</span>
+          
+          {quoteDetail.status === "COMPLETED" && (
+            <button 
+              onClick={handleDownloadPdf}
+              disabled={isDownloading}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-lg text-xs font-extrabold transition-colors disabled:opacity-50 shadow-sm"
+            >
+              {isDownloading ? <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-indigo-600"></div> : <Download size={14} />}
+              보고서 PDF 다운로드
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col xl:flex-row gap-6">
@@ -227,7 +268,7 @@ export default function AdminQuoteDetail() {
           </div>
         </div>
 
-        {/* 🌟 우측: 관리자 액션 패널 */}
+        {/* 우측: 관리자 액션 패널 */}
         <div className="w-full xl:w-[400px] flex-shrink-0 flex flex-col gap-6">
           <div className="bg-indigo-50/50 rounded-2xl border border-indigo-100 shadow-sm p-6 md:p-8 sticky top-24">
             <h3 className="text-base font-extrabold text-indigo-900 mb-6 flex items-center gap-2">
@@ -269,7 +310,7 @@ export default function AdminQuoteDetail() {
                   대기/취소 상태인 경우, 직접 업체를 콕 집어 매칭하거나 반경을 넓혀 랜덤 매칭할 수 있습니다.
                 </p>
                 
-                {/* 🌟 수동 매칭 버튼 */}
+                {/* 수동 매칭 버튼 */}
                 <button 
                   onClick={openNearbyModal}
                   disabled={quoteDetail.status !== "MATCHING" && quoteDetail.status !== "CANCELED"}
@@ -278,7 +319,7 @@ export default function AdminQuoteDetail() {
                   <UserPlus size={16} /> 근처 조합원 검색 및 수동 할당
                 </button>
                 
-                {/* 🌟 자동 확장 매칭 버튼 */}
+                {/* 자동 확장 매칭 버튼 */}
                 <button 
                   onClick={handleRematch}
                   disabled={isProcessing || (quoteDetail.status !== "MATCHING" && quoteDetail.status !== "CANCELED")}
@@ -293,7 +334,7 @@ export default function AdminQuoteDetail() {
         </div>
       </div>
 
-      {/* 🌟 [신규] 근처 조합원 수동 매칭 모달 */}
+      {/* 근처 조합원 수동 매칭 모달 */}
       {isNearbyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
