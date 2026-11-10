@@ -4,15 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Trash2, Search, Loader2, FileText, CheckCircle, Edit2 } from "lucide-react";
 
-const LEVEL_NAMES: Record<number, string> = {
-  0: "차단/대기", 1: "일반회원", 2: "정회원", 3: "우수회원", 4: "VIP회원",
-  5: "특별회원", 6: "부관리자", 7: "운영자", 8: "부서장", 9: "관리자", 10: "최고관리자"
-};
-
 export default function MemberManager() {
   const router = useRouter();
   const [members, setMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // ✨ DB에서 불러온 레벨 명칭을 저장할 상태 추가
+  const [levelNames, setLevelNames] = useState<Record<number, string>>({});
   
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -28,6 +26,19 @@ export default function MemberManager() {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${cleanToken}`
     };
+  };
+
+  // ✨ 회원 설정(레벨 명칭 등) 불러오기 함수 추가
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/member-settings`);
+      const json = await res.json();
+      if (json.success && json.data && json.data.levelNames) {
+        setLevelNames(json.data.levelNames);
+      }
+    } catch (error) {
+      console.error("회원 설정 조회 오류:", error);
+    }
   };
 
   const fetchMembers = async (currentPage = 1, currentFilter = filterLevel) => {
@@ -65,6 +76,7 @@ export default function MemberManager() {
   }
 
   useEffect(() => {
+    fetchSettings(); // ✨ 마운트 시 회원 설정(레벨 명칭) 먼저 호출
     fetchMembers(1);
   }, []);
 
@@ -196,7 +208,8 @@ export default function MemberManager() {
                       m.level === 0 ? 'bg-amber-100 text-amber-700' :
                       m.level >= 9 ? 'bg-rose-100 text-rose-700' : 'bg-indigo-50 text-indigo-700'
                     }`}>
-                      LV.{m.level} {LEVEL_NAMES[m.level] || "알수없음"}
+                      {/* ✨ levelNames 상태를 매핑하여 출력되도록 수정 */}
+                      LV.{m.level} {levelNames[m.level] || "알수없음"}
                     </span>
                   </td>
                   <td className="p-4 text-xs text-slate-500">

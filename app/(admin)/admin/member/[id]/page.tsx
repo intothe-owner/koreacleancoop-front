@@ -5,11 +5,6 @@ import { useRouter, useParams } from "next/navigation";
 import { Users, Shield, List, Loader2, FileText } from "lucide-react";
 import Script from "next/script";
 
-const LEVEL_NAMES: Record<number, string> = {
-  0: "차단/대기", 1: "일반회원", 2: "정회원", 3: "우수회원", 4: "VIP회원",
-  5: "특별회원", 6: "부관리자", 7: "운영자", 8: "부서장", 9: "관리자", 10: "최고관리자"
-};
-
 export default function MemberDetail() {
   const router = useRouter();
   const params = useParams();
@@ -17,6 +12,9 @@ export default function MemberDetail() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  // ✨ DB에서 불러온 레벨 명칭을 저장할 상태 추가
+  const [levelNames, setLevelNames] = useState<Record<number, string>>({});
 
   const initialForm = {
     id: 0, loginId: "", name: "", nickname: "", phone: "", mobile: "", 
@@ -36,21 +34,33 @@ export default function MemberDetail() {
   };
 
   useEffect(() => {
-    const fetchMember = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/members/${memberId}`, {
-          headers: { ...getAuthHeaders(), "Content-Type": "application/json" }
-        });
-        const json = await res.json();
+        // ✨ 회원 정보와 레벨 명칭 설정을 병렬로 동시에 불러옵니다.
+        const [memberRes, settingsRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/members/${memberId}`, {
+            headers: { ...getAuthHeaders(), "Content-Type": "application/json" }
+          }),
+          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/member-settings`)
+        ]);
 
-        if (json.success) {
-          setFormData({ ...json.data, password: "" });
+        const memberJson = await memberRes.json();
+        const settingsJson = await settingsRes.json();
+
+        // 설정 API에서 레벨 명칭 세팅
+        if (settingsJson.success && settingsJson.data && settingsJson.data.levelNames) {
+          setLevelNames(settingsJson.data.levelNames);
+        }
+
+        // 회원 상세 정보 세팅
+        if (memberJson.success) {
+          setFormData({ ...memberJson.data, password: "" });
         } else {
-          alert(json.message || "회원 정보를 불러오지 못했습니다.");
+          alert(memberJson.message || "회원 정보를 불러오지 못했습니다.");
           router.push("/admin/member");
         }
       } catch (error) {
-        console.error("회원 상세 조회 오류:", error);
+        console.error("데이터 조회 오류:", error);
         alert("서버 오류가 발생했습니다.");
         router.push("/admin/member");
       } finally {
@@ -59,7 +69,7 @@ export default function MemberDetail() {
     };
 
     if (memberId) {
-      fetchMember();
+      fetchData();
     }
   }, [memberId, router]);
 
@@ -322,7 +332,8 @@ export default function MemberDetail() {
                     className={inputClass}
                     disabled={formData.level === 10} 
                   >
-                    {Object.entries(LEVEL_NAMES).map(([level, name]) => (
+                    {/* ✨ 상태로 불러온 levelNames를 매핑하여 동적으로 옵션 렌더링 */}
+                    {Object.entries(levelNames).map(([level, name]) => (
                       <option key={level} value={level}>{name} (Level {level})</option>
                     ))}
                   </select>
