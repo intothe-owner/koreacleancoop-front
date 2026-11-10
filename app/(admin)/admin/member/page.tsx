@@ -205,7 +205,7 @@ export default function MemberManager() {
                   <td className="p-4 text-center">
                     {m.level === 0 && (
                       <button onClick={() => handleApprove(m.id)} className="text-emerald-500 hover:text-emerald-700 mr-3 transition-colors" title="가입 승인">
-                        <CheckCircle size={18}/>
+                        승인하기
                       </button>
                     )}
                     <button 
