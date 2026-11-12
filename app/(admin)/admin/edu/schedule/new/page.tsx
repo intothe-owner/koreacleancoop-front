@@ -11,7 +11,8 @@ export default function EduScheduleCreate() {
 
   const initialForm = {
     title: "",
-    eduDate: "",
+    startDate: "",
+    endDate: "",
     location: "",
     status: "준비중"
   };
@@ -29,6 +30,11 @@ export default function EduScheduleCreate() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!confirm("새 교육 일정을 등록하시겠습니까?")) return;
+
+    if (formData.startDate > formData.endDate) {
+      alert("종료일이 시작일보다 빠를 수 없습니다.");
+      return;
+    }
 
     setIsSaving(true);
 
@@ -97,18 +103,28 @@ export default function EduScheduleCreate() {
           </div>
 
           <div>
-            <label className="block font-bold mb-1 text-slate-700">교육 일시</label>
+            <label className="block font-bold mb-1 text-slate-700">교육 시작일</label>
             <input 
-              type="text" 
-              value={formData.eduDate} 
-              onChange={e => setFormData({...formData, eduDate: e.target.value})} 
+              type="date" 
+              value={formData.startDate} 
+              onChange={e => setFormData({...formData, startDate: e.target.value})} 
               required 
-              placeholder="예) 2026-12-01 14:00 ~ 16:00"
               className={inputClass} 
             />
           </div>
 
           <div>
+            <label className="block font-bold mb-1 text-slate-700">교육 종료일</label>
+            <input 
+              type="date" 
+              value={formData.endDate} 
+              onChange={e => setFormData({...formData, endDate: e.target.value})} 
+              required 
+              className={inputClass} 
+            />
+          </div>
+
+          <div className="col-span-2">
             <label className="block font-bold mb-1 text-slate-700">교육 장소</label>
             <input 
               type="text" 

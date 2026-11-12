@@ -29,7 +29,7 @@ export default function EduScheduleManager() {
     };
   };
 
-  // DB에서 교육 일정 불러오기 (백엔드가 전체 데이터를 주므로 프론트에서 필터링)
+  // DB에서 교육 일정 불러오기
   const fetchSchedules = async () => {
     setIsLoading(true);
     try {
@@ -192,7 +192,7 @@ export default function EduScheduleManager() {
               <tr>
                 <th className="p-4 font-bold text-center w-16">ID</th>
                 <th className="p-4 font-bold">교육명</th>
-                <th className="p-4 font-bold">교육 일시</th>
+                <th className="p-4 font-bold">교육 기간 (시작~종료)</th>
                 <th className="p-4 font-bold">장소</th>
                 <th className="p-4 font-bold text-center w-24">상태</th>
                 <th className="p-4 font-bold text-center w-28">등록일</th>
@@ -204,7 +204,10 @@ export default function EduScheduleManager() {
                 <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="p-4 text-center text-slate-500">{item.id}</td>
                   <td className="p-4 font-bold text-slate-800">{item.title}</td>
-                  <td className="p-4 text-slate-600">{item.eduDate}</td>
+                  {/* ✨ 변경된 부분: startDate와 endDate를 이어서 출력 */}
+                  <td className="p-4 text-slate-600">
+                    {item.startDate} ~ {item.endDate}
+                  </td>
                   <td className="p-4 text-slate-600">{item.location}</td>
                   <td className="p-4 text-center">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
