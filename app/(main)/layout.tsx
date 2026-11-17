@@ -16,6 +16,14 @@ export async function generateMetadata(): Promise<Metadata> {
         description: json.data.metaDescription,
         keywords: json.data.metaKeywords,
         icons: { icon: json.data.faviconUrl || "/favicon.ico" },
+        openGraph: {
+          title: json.data.siteName,
+          description: json.data.metaDescription,
+          url: 'https://www.koreacleancoop.kr', // 실제 운영 중인 도메인 입력
+          siteName: '한국클린쿱',
+          locale: 'ko_KR',
+          type: 'website',
+        },
         verification: {
          // google:"BTFDWNS0w5LozBehn8L8H4VxgBdn_fAAiUPfcFGSmdQ",
           other: {
