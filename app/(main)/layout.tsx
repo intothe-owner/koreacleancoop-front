@@ -16,6 +16,12 @@ export async function generateMetadata(): Promise<Metadata> {
         description: json.data.metaDescription,
         keywords: json.data.metaKeywords,
         icons: { icon: json.data.faviconUrl || "/favicon.ico" },
+        verification: {
+         // google:"BTFDWNS0w5LozBehn8L8H4VxgBdn_fAAiUPfcFGSmdQ",
+          other: {
+            "naver-site-verification": ["b494d53638cfd6ab41ca70fea064e490cd3f1a29"],
+          },
+        },
       };
     }
   } catch (e) {}
