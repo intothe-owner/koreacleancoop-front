@@ -6,14 +6,17 @@ import {
   Users, FileText, MessageSquare, Settings, 
   Activity, ArrowRight, ShieldCheck, Calculator, Clock
 } from "lucide-react";
+
+// 백엔드 MySQL 모델(QuoteRequest) 컬럼명에 맞게 인터페이스 수정
 interface Quote {
-  _id: string;
-  clientName: string;
-  company: string;
-  service: string;
+  id: string | number; // _id에서 id로 변경
+  customerName: string; // clientName에서 customerName으로 변경
+  company?: string;
+  serviceType: string; // service에서 serviceType으로 변경
   status: string;
   createdAt: string;
 }
+
 interface DashboardData {
   totalMembers: number;
   quoteRequests: number;
@@ -21,31 +24,38 @@ interface DashboardData {
   dailyVisitors: number;
   recentQuotes: Quote[];
 }
+
 export default function AdminDashboard() {
   const [adminName, setAdminName] = useState("관리자");
   
-  // 백엔드 연동을 위한 상태 (견적문의 데이터 위주로 개편)
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     totalMembers: 0,
     quoteRequests: 0,
     newPosts: 0,
     dailyVisitors: 0,
-    recentQuotes: [] // 이제 TypeScript가 이 배열이 Quote[] 타입임을 알게 됩니다.
+    recentQuotes: []
   });
 
   useEffect(() => {
-    // 1. 관리자 정보 로드
-    const userStr = localStorage.getItem("user");
+    // 1. 관리자 정보 및 토큰 로드 (토큰 추출 로직 강화)
     let token = "";
+    const userStr = localStorage.getItem("user");
+    
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        setAdminName(user.name);
-        token = user.token || "";
+        setAdminName(user.name || "관리자");
+        // user 객체 내에 token이나 accessToken이 있는지 확인
+        token = user.token || user.accessToken || ""; 
       } catch (e) {
         console.error("유저 정보 파싱 오류:", e);
       }
+    }
+    
+    // 만약 user 객체 안에 없고 localStorage에 직접 'token'으로 저장되어 있다면 fallback 처리
+    if (!token) {
+      token = localStorage.getItem("token") || "";
     }
 
     // 2. 백엔드 통계 및 최근 견적 데이터 Fetch
@@ -54,13 +64,14 @@ export default function AdminDashboard() {
         setIsLoading(true);
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
         
-        const headers = {
+        // 헤더에 명시적으로 토큰 추가
+        const headers: Record<string, string> = {
           "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` })
         };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
 
-        // 실제 API 엔드포인트는 백엔드 라우터 설정에 맞춰 수정해야 합니다.
-        // 임시로 오류 발생 시 더미 데이터를 반환하도록 구성했습니다.
         const [membersRes, quotesRes, postsRes, visitorsRes, recentQuotesRes] = await Promise.all([
           fetch(`${baseUrl}/api/members/count`, { headers }).catch(() => ({ json: () => ({ count: 1248 }) })),
           fetch(`${baseUrl}/api/quotes/count`, { headers }).catch(() => ({ json: () => ({ count: 45 }) })),
@@ -69,9 +80,9 @@ export default function AdminDashboard() {
           fetch(`${baseUrl}/api/quotes/recent`, { headers }).catch(() => ({ 
             json: () => ({ 
               data: [
-                { _id: '1', clientName: '홍길동', company: '(주)테스트', service: '웹사이트 리뉴얼', status: '대기중', createdAt: '2026-11-17T10:30:00' },
-                { _id: '2', clientName: '김철수', company: '개인', service: '쇼핑몰 구축', status: '답변완료', createdAt: '2026-11-16T14:20:00' },
-                { _id: '3', clientName: '이영희', company: '스타트업', service: '앱 개발', status: '진행중', createdAt: '2026-11-15T09:15:00' }
+                { id: '1', customerName: '홍길동', company: '(주)테스트', serviceType: 'BUILDING', status: 'MATCHING', createdAt: '2026-11-17T10:30:00' },
+                { id: '2', customerName: '김철수', company: '개인', serviceType: 'AIRCON', status: 'MATCHED', createdAt: '2026-11-16T14:20:00' },
+                { id: '3', customerName: '이영희', company: '스타트업', serviceType: 'PEST', status: 'PENDING', createdAt: '2026-11-15T09:15:00' }
               ] 
             }) 
           }))
@@ -100,7 +111,6 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  // 동적 통계 데이터 매핑
   const stats = [
     { title: "총 회원 수", value: dashboardData.totalMembers.toLocaleString(), desc: "전월 대비 +12%", icon: Users, color: "text-blue-600", bg: "bg-blue-100" },
     { title: "총 견적문의", value: dashboardData.quoteRequests.toLocaleString(), desc: "최근 7일간 +5건", icon: Calculator, color: "text-emerald-600", bg: "bg-emerald-100" },
@@ -108,23 +118,19 @@ export default function AdminDashboard() {
     { title: "일일 방문자", value: dashboardData.dailyVisitors.toLocaleString(), desc: "전일 대비 +24%", icon: Activity, color: "text-indigo-600", bg: "bg-indigo-100" },
   ];
 
-  // 빠른 실행 링크
   const quickLinks = [
     { title: "사이트 설정", desc: "기본 정보 및 테마 변경", href: "/admin/settings", icon: Settings },
     { title: "견적 관리", desc: "견적 요청 확인 및 답변", href: "/admin/quotes", icon: FileText },
     { title: "회원 관리", desc: "가입자 목록 및 권한 설정", href: "/admin/member", icon: ShieldCheck },
   ];
 
-  // 날짜 포맷 함수
-  const formatDate = (dateString:any) => {
+  const formatDate = (dateString: any) => {
     const date = new Date(dateString);
     return `${date.getMonth() + 1}월 ${date.getDate()}일 ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
   };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      
-      {/* 1. 환영 메시지 배너 */}
       <div className="bg-gradient-to-r from-slate-900 to-indigo-900 rounded-3xl p-8 sm:p-10 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
         <div className="relative z-10">
           <h1 className="text-3xl font-black mb-2 tracking-tight">환영합니다, {adminName}님! 👋</h1>
@@ -146,7 +152,6 @@ export default function AdminDashboard() {
         <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl"></div>
       </div>
 
-      {/* 2. 요약 통계 카드 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, idx) => {
           const Icon = stat.icon;
@@ -173,10 +178,7 @@ export default function AdminDashboard() {
         })}
       </div>
 
-      {/* 3. 빠른 실행 및 최근 견적문의 */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        
-        {/* 빠른 실행 */}
         <div className="xl:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
             <h3 className="text-lg font-bold text-slate-800">빠른 실행</h3>
@@ -206,7 +208,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* 최근 견적문의 목록 */}
         <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
           <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
             <h3 className="text-lg font-bold text-slate-800">최근 견적문의</h3>
@@ -230,18 +231,18 @@ export default function AdminDashboard() {
             ) : (
               <ul className="flex flex-col gap-3">
                 {dashboardData.recentQuotes.map((quote) => (
-                  <li key={quote._id} className="p-4 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors flex justify-between items-center group cursor-pointer">
+                  <li key={quote.id} className="p-4 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors flex justify-between items-center group cursor-pointer">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-slate-800">{quote.company || quote.clientName}</h4>
-                          <span className="text-sm text-slate-500">{quote.service}</span>
+                          <h4 className="font-bold text-slate-800">{quote.company || quote.customerName}</h4>
+                          <span className="text-sm text-slate-500">{quote.serviceType}</span>
                         </div>
                         <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
                           <Clock size={12} />
                           <span>{formatDate(quote.createdAt)}</span>
                           <span className="mx-1">·</span>
-                          <span>담당자: {quote.clientName}</span>
+                          <span>담당자: {quote.customerName}</span>
                         </div>
                       </div>
                     </div>
@@ -249,8 +250,8 @@ export default function AdminDashboard() {
                     {/* 상태 뱃지 */}
                     <div className="flex items-center gap-3">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap
-                        ${quote.status === '대기중' ? 'bg-amber-100 text-amber-700' : 
-                          quote.status === '진행중' ? 'bg-blue-100 text-blue-700' : 
+                        ${quote.status === 'PENDING' || quote.status === 'MATCHING' ? 'bg-amber-100 text-amber-700' : 
+                          quote.status === 'MATCHED' || quote.status === 'PROPOSED' ? 'bg-blue-100 text-blue-700' : 
                           'bg-slate-100 text-slate-600'}`}>
                         {quote.status}
                       </span>
