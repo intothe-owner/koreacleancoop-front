@@ -7,7 +7,7 @@ import {
   Settings, Users, UserCheck, Menu as MenuIcon,
   FileText, MessageSquare, LogOut, UserCircle, Loader2, Megaphone,
   BarChart2, Building2, ChevronDown, Award, Users2, TrendingUp, HeartHandshake,
-  ClipboardList, CheckCircle2, BookOpen, Calendar, ClipboardCheck
+  ClipboardList, CheckCircle2, BookOpen, Calendar, ClipboardCheck, Briefcase
 } from "lucide-react";
 import TokenChecker from "@/components/TokenChecker";
 import { usePathname } from "next/navigation";
@@ -61,8 +61,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setIsSettingsOpen(true);
     }
 
-    // 2. 통계 카테고리 체크
-    if (pathname.startsWith("/admin/statistics")) {
+    // 2. 통계 및 부가기능 카테고리 체크
+    if (pathname.startsWith("/admin/statistics") || pathname.startsWith("/admin/notices")) {
       setIsStatsOpen(true);
     }
 
@@ -324,9 +324,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {isStatsOpen && (
             <div className="space-y-1 mb-6">
-              <Link href="/admin/statistics" className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-300 hover:bg-indigo-600 hover:text-white transition-all">
+              <Link
+                href="/admin/statistics"
+                className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
+                  pathname.startsWith('/admin/statistics')
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-300 hover:bg-indigo-600 hover:text-white'
+                }`}
+              >
                 <BarChart2 size={18} />
                 <span className="font-medium text-sm">방문자 통계</span>
+              </Link>
+              <Link
+                href="/admin/notices"
+                className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
+                  pathname.startsWith('/admin/notices')
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-300 hover:bg-indigo-600 hover:text-white'
+                }`}
+              >
+                <Briefcase size={18} />
+                <span className="font-medium text-sm">공모사업</span>
               </Link>
             </div>
           )}
